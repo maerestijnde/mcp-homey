@@ -6,11 +6,11 @@ install:
 
 # Testing
 test:
-	export PATH="$HOME/.local/bin:$PATH" && uv run pytest tests/ -v --asyncio-mode=auto
+	export PATH="$$HOME/.local/bin:$$PATH" && uv run pytest tests/ -v --asyncio-mode=auto
 
 # Test MCP server functionality
 test-server:
-	export PATH="$HOME/.local/bin:$PATH" && \
+	export PATH="$$HOME/.local/bin:$$PATH" && \
 	OFFLINE_MODE=true DEMO_MODE=true \
 	uv run python test_server.py
 
@@ -54,8 +54,7 @@ run-dev:
 # MCP Inspector voor testing
 inspector:
 	npx @modelcontextprotocol/inspector \
-		--server "uv" \
-		--server-args "run" "python" "-m" "homey_mcp"
+		uv run python -m homey_mcp
 
 # Cleanup
 clean:

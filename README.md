@@ -9,7 +9,7 @@ De server is klaar voor gebruik! Momenteel draait hij in **demo mode** vanwege t
 ## 🚀 Quick Start
 
 ```bash
-cd /Users/yourname/Projects/Homey/MCP-Homey
+cd /Users/yourname/projects/mcp-homey
 export PATH="$HOME/.local/bin:$PATH"
 
 # Start in demo mode (AANBEVOLEN voor eerste test)
@@ -64,9 +64,9 @@ Voeg toe aan `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "homey": {
-      "command": "uv", 
-      "args": ["run", "python", "-m", "homey_mcp"],
-      "cwd": "/Users/yourname/Projects/Homey/MCP-Homey",
+      "command": "/Users/yourname/.local/bin/uv", 
+      "args": ["run", "python", "src/homey_mcp/__main__.py"],
+      "cwd": "/Users/yourname/Projects/mcp-homey",
       "env": {
         "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP",
         "HOMEY_LOCAL_TOKEN": "je-nieuwe-token-hier"
@@ -76,7 +76,11 @@ Voeg toe aan `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-**Herstart Claude Desktop** na deze configuratie!
+⚠️ **BELANGRIJK**: 
+- Gebruik **volledige pad** naar `uv`: `/Users/yourname/.local/bin/uv` 
+- Gebruik **directe file path**: `src/homey_mcp/__main__.py` (niet `-m homey_mcp`)
+- Gebruik **correcte project pad**: `/Users/yourname/Projects/mcp-homey` (uppercase Projects)
+- **Herstart Claude Desktop** na deze configuratie!
 
 ## 🧪 Demo Mode Usage
 
@@ -99,8 +103,12 @@ Test commando's in Claude:
 ## 🛠️ Development Commands
 
 ```bash
+# Installatie
+make install           # Install dependencies
+
 # Testen
 make test              # Run unit tests
+make test-server       # Test MCP server functionality
 make test-connection   # Test Homey verbinding
 
 # Code quality  
@@ -110,10 +118,21 @@ make lint              # Check code quality
 # Development
 make run-offline       # Demo mode
 make run               # Normale mode
+make run-dev           # Run with debug logging
 make inspector         # MCP Inspector voor debugging
+
+# Utilities
+make clean             # Clean build artifacts
+make help              # Show all available commands
 ```
 
 ## 🔍 Troubleshooting
+
+### ❌ "uv: command not found" error bij make commando's
+**Probleem**: Makefile kan `uv` niet vinden in PATH  
+**Oplossing**: ✅ **FIXED!** - Makefile is bijgewerkt met correcte PATH handling
+- Alle Makefile targets gebruiken nu `$$HOME` in plaats van `$HOME`
+- Geen handmatige PATH export meer nodig
 
 ### ❌ "Missing Scopes" error
 → Maak nieuwe API key aan met ALLE scopes
@@ -129,10 +148,17 @@ make inspector         # MCP Inspector voor debugging
 make run-offline
 ```
 
+### 🔧 Handmatige uv installatie (indien nodig)
+```bash
+# Installeer uv als het ontbreekt
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc  # of restart terminal
+```
+
 ## 📊 Project Structure
 
 ```
-MCP-Homey/
+mcp-homey/
 ├── src/homey_mcp/           # Hoofdcode
 │   ├── server.py            # MCP server (8 tools)
 │   ├── homey_client.py      # Homey API client
@@ -140,11 +166,29 @@ MCP-Homey/
 │   └── tools/               # Tool implementations
 ├── tests/                   # Unit tests  
 ├── .env                     # Configuratie (demo mode)
+├── Makefile                 # Development commands
 └── README.md               # Deze documentatie
 ```
+
+## 🔄 Recent Updates
+
+### v1.1 - Makefile Fixes (Juni 2025)
+- ✅ **Fixed**: Makefile PATH handling voor `uv` command
+- ✅ **Fixed**: Correcte variable escaping (`$$HOME` in plaats van `$HOME`)
+- ✅ **Added**: Nieuwe troubleshooting sectie
+- ✅ **Added**: Volledige command overzicht in documentation
+
+### v1.0 - Initial Release
+- ✅ 8 MCP tools voor Homey integratie
+- ✅ Demo mode voor offline testing
+- ✅ Volledige Claude Desktop integratie
 
 ## 🎉 Success!
 
 Je Homey MCP Server is volledig operationeel! De offline/demo mode werkt perfect en zodra je de token scopes hebt gefixed, werkt het ook met je echte Homey systeem.
 
 **Volgende stap**: Configureer Claude Desktop en test de integratie! 🚀
+
+---
+
+**💡 Pro Tip**: Gebruik `make help` om alle beschikbare commando's te zien!
