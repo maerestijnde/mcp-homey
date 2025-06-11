@@ -49,21 +49,34 @@ class HomeyAPIClient:
             response.raise_for_status()
             logger.info("✅ Successfully connected to Homey")
         except httpx.ConnectTimeout:
-            logger.error(f"❌ Connection timeout to {self.base_url}")
-            logger.error("💡 Check if:")
-            logger.error("   - Homey IP address is correct")
-            logger.error("   - Homey is reachable on the network")
-            logger.error("   - Firewall settings")
-            raise ConnectionError(f"Cannot connect to Homey at {self.base_url}")
+            logger.warning(f"❌ Connection timeout to {self.base_url}")
+            logger.warning("💡 Check if:")
+            logger.warning("   - Homey IP address is correct")
+            logger.warning("   - Homey is reachable on the network")
+            logger.warning("   - Firewall settings")
+            logger.warning("🔄 Switching to demo mode automatically...")
+            # Auto-enable demo mode for connection failures
+            self.config.offline_mode = True
+            self.config.demo_mode = True
+            return  # Continue in demo mode
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                logger.error("❌ Unauthorized - check your Personal Access Token")
+                logger.warning("❌ Unauthorized - check your Personal Access Token")
+                logger.warning("🔄 Switching to demo mode automatically...")
+                # Auto-enable demo mode for authentication failures
+                self.config.offline_mode = True
+                self.config.demo_mode = True
+                return  # Continue in demo mode
             else:
                 logger.error(f"❌ HTTP error {e.response.status_code}: {e.response.text}")
             raise
         except Exception as e:
-            logger.error(f"❌ Unknown error connecting to Homey: {e}")
-            raise
+            logger.warning(f"❌ Cannot connect to Homey: {e}")
+            logger.warning("🔄 Switching to demo mode automatically...")
+            # Auto-enable demo mode for any connection failures
+            self.config.offline_mode = True
+            self.config.demo_mode = True
+            return  # Continue in demo mode
 
     async def disconnect(self):
         """Close connection."""

@@ -32,6 +32,9 @@ The Homey MCP Server enables Claude AI to interact directly with your Homey Pro 
    git clone <repository-url>
    cd mcp-homey
    make install
+   
+   # Make the script executable (macOS/Linux only)
+   chmod +x start_homey_mcp.sh
    ```
 
 2. **Get Homey Token**
@@ -41,16 +44,45 @@ The Homey MCP Server enables Claude AI to interact directly with your Homey Pro 
 
 3. **Configure Claude Desktop**
    
+   **⚠️ IMPORTANT: Replace all paths with YOUR actual paths**
+   
    ### 🍎 **macOS/Linux**
    Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
    ```json
    {
      "mcpServers": {
        "homey": {
-         "command": "/path/to/mcp-homey/start_homey_mcp.sh",
+         "command": "/path/to/your/uv/binary",
+         "args": ["run", "--directory", "/path/to/your/mcp-homey", "python", "src/homey_mcp/__main__.py"],
          "env": {
-           "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP",
+           "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP_ADDRESS",
            "HOMEY_LOCAL_TOKEN": "your-token-here",
+           "OFFLINE_MODE": "false",
+           "DEMO_MODE": "false"
+         }
+       }
+     }
+   }
+   ```
+   
+   **Find your uv path with:**
+   ```bash
+   which uv
+   # Usually: /Users/yourname/.local/bin/uv
+   #      or: /usr/local/bin/uv  
+   #      or: /opt/homebrew/bin/uv
+   ```
+   
+   **Example with real paths:**
+   ```json
+   {
+     "mcpServers": {
+       "homey": {
+         "command": "/Users/yourname/.local/bin/uv",
+         "args": ["run", "--directory", "/Users/yourname/Projects/mcp-homey", "python", "src/homey_mcp/__main__.py"],
+         "env": {
+           "HOMEY_LOCAL_ADDRESS": "192.168.1.100",
+           "HOMEY_LOCAL_TOKEN": "abc123xyz789",
            "OFFLINE_MODE": "false",
            "DEMO_MODE": "false"
          }
@@ -66,11 +98,35 @@ The Homey MCP Server enables Claude AI to interact directly with your Homey Pro 
      "mcpServers": {
        "homey": {
          "command": "uv",
-         "args": ["run", "python", "src/homey_mcp/__main__.py"],
-         "cwd": "C:\\path\\to\\mcp-homey",
+         "args": ["run", "--directory", "C:\\path\\to\\mcp-homey", "python", "src/homey_mcp/__main__.py"],
          "env": {
-           "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP",
+           "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP_ADDRESS",
            "HOMEY_LOCAL_TOKEN": "your-token-here",
+           "OFFLINE_MODE": "false",
+           "DEMO_MODE": "false"
+         }
+       }
+     }
+   }
+   ```
+   
+   **Find your uv path with:**
+   ```powershell
+   where uv
+   # Usually: C:\Users\yourname\.local\bin\uv.exe
+   #      or: C:\Program Files\uv\uv.exe
+   ```
+   
+   **Example with real paths:**
+   ```json
+   {
+     "mcpServers": {
+       "homey": {
+         "command": "C:\\Users\\yourname\\.local\\bin\\uv.exe",
+         "args": ["run", "--directory", "C:\\Users\\yourname\\Projects\\mcp-homey", "python", "src/homey_mcp/__main__.py"],
+         "env": {
+           "HOMEY_LOCAL_ADDRESS": "192.168.1.100",
+           "HOMEY_LOCAL_TOKEN": "abc123xyz789",
            "OFFLINE_MODE": "false",
            "DEMO_MODE": "false"
          }
@@ -81,10 +137,41 @@ The Homey MCP Server enables Claude AI to interact directly with your Homey Pro 
    
    **Windows Notes:**
    - Install uv first: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-   - Use full Windows paths: `C:\\Users\\YourName\\Projects\\mcp-homey`
+   - Use full Windows paths with double backslashes: `C:\\Users\\Name\\Projects\\mcp-homey`
    - Restart PowerShell after installing uv
+   - Use `where uv` to find the exact uv.exe path
 
-4. **Restart Claude Desktop and test!**
+4. **Find Your Paths**
+   
+   Before configuring Claude, find the correct paths for your system:
+   
+   **macOS/Linux:**
+   ```bash
+   # Find uv location
+   which uv
+   
+   # Find project directory  
+   cd path/to/mcp-homey && pwd
+   
+   # Example output:
+   # /Users/yourname/.local/bin/uv
+   # /Users/yourname/Projects/mcp-homey
+   ```
+   
+   **Windows:**
+   ```powershell
+   # Find uv location
+   where uv
+   
+   # Find project directory
+   cd path\to\mcp-homey; pwd
+   
+   # Example output:
+   # C:\Users\yourname\.local\bin\uv.exe
+   # C:\Users\yourname\Projects\mcp-homey
+   ```
+
+5. **Restart Claude Desktop and test!**
 
 ## ⚙️ Operating Modes
 
@@ -93,7 +180,7 @@ Switch modes by editing your Claude Desktop config and restarting Claude:
 ### 🏠 **Normal Mode** (Real Homey)
 ```json
 "env": {
-  "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP",
+  "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP_ADDRESS",
   "HOMEY_LOCAL_TOKEN": "your-actual-token",
   "OFFLINE_MODE": "false",
   "DEMO_MODE": "false"
@@ -179,10 +266,14 @@ Get-Content homey_mcp_debug.log -Wait  # Like tail -f
 ### 🪟 **Windows-specific**
 **❌ "uv not found"** → Install uv: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`  
 **❌ Path issues** → Use full Windows paths with double backslashes: `C:\\Users\\Name\\Projects\\mcp-homey`  
-**❌ PowerShell execution policy** → Run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+**❌ PowerShell execution policy** → Run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`  
+**❌ Wrong uv path** → Use `where uv` to find exact path, then use full path like `C:\\Users\\yourname\\.local\\bin\\uv.exe`
 
 ### 🍎 **macOS/Linux**  
-**❌ Configuration issues** → Check path to `start_homey_mcp.sh` and file permissions: `chmod +x start_homey_mcp.sh`  
+**❌ "uv not found"** → Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh` and restart terminal  
+**❌ "command not found"** → Use full path to uv binary: `/Users/yourname/.local/bin/uv`  
+**❌ Permission denied** → Make sure uv is executable: `chmod +x /path/to/uv`  
+**❌ Wrong paths** → Use `which uv` and `pwd` to get correct absolute paths  
 
 ### 🌐 **All Platforms**
 **❌ Missing scopes** → Create API key with ALL scopes at [my.homey.app](https://my.homey.app)  
