@@ -46,8 +46,8 @@ test-connection:
 
 run-dev:
 	export PATH="$$HOME/.local/bin:$$PATH" && \
-	HOMEY_LOCAL_ADDRESS=192.168.1.100 \
-	HOMEY_LOCAL_TOKEN=your-token \
+	HOMEY_LOCAL_ADDRESS=YOUR_HOMEY_IP \
+	HOMEY_LOCAL_TOKEN=your-token-here \
 	LOG_LEVEL=DEBUG \
 	uv run python -m homey_mcp
 

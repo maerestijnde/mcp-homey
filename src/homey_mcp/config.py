@@ -7,8 +7,8 @@ from pydantic_settings import BaseSettings
 
 class HomeyMCPConfig(BaseSettings):
     # Homey configuratie
-    homey_local_address: str = "192.168.1.100"  # Default IP
-    homey_local_token: str = "demo-token"  # Default token
+    homey_local_address: str = "YOUR_HOMEY_IP"  # User must set this
+    homey_local_token: str = "your-token-here"  # User must set this
 
     # Server configuratie
     log_level: str = "INFO"
