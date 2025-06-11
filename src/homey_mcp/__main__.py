@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Entry point voor Homey MCP Server.
+Entry point voor Homey MCP Server v3.0 with insights support.
 """
 import asyncio
 import logging
@@ -18,9 +18,10 @@ logging.basicConfig(
     ]
 )
 
-# Add src to path voor development
+# Add src to path for development (this should be set by the shell script)
 src_path = Path(__file__).parent.parent
-sys.path.insert(0, str(src_path))
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 
 from homey_mcp.server import main
 
@@ -29,7 +30,7 @@ async def run_server():
     """Main entry point."""
     try:
         logger = logging.getLogger(__name__)
-        logger.info("Starting Homey MCP Server...")
+        logger.info("🚀 Starting Homey MCP Server v3.0 from __main__.py...")
 
         # Start server
         await main()
@@ -39,8 +40,9 @@ async def run_server():
         logger.info("Server gestopt door gebruiker")
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Server error: {e}", exc_info=True)
-        sys.exit(1)
+        logger.error(f"❌ Server error in __main__.py: {e}", exc_info=True)
+        # Don't sys.exit(1) as it can cause issues with MCP
+        raise
 
 
 if __name__ == "__main__":

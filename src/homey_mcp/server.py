@@ -7,6 +7,7 @@ from mcp.types import TextContent, Tool
 from .config import get_config
 from .homey_client import HomeyAPIClient
 from .tools import DeviceControlTools, FlowManagementTools
+from .tools.insights import InsightsTools
 
 # Get logger (logging is configured in __main__.py)
 logger = logging.getLogger(__name__)
@@ -18,11 +19,12 @@ mcp = FastMCP("Homey Integration Server")
 homey_client = None
 device_tools = None
 flow_tools = None
+insights_tools = None
 
 
 async def initialize_server():
     """Initialiseer de server en tools."""
-    global homey_client, device_tools, flow_tools
+    global homey_client, device_tools, flow_tools, insights_tools
 
     logger.info("🚀 Initialiseren Homey MCP Server...")
 
@@ -54,8 +56,9 @@ async def initialize_server():
     # Setup tools
     device_tools = DeviceControlTools(homey_client)
     flow_tools = FlowManagementTools(homey_client)
+    insights_tools = InsightsTools(homey_client)
 
-    logger.info("✅ Homey MCP Server geïnitialiseerd met 8 tools")
+    logger.info("✅ Homey MCP Server geïnitialiseerd met 15 tools (12 device/flow + 3 insights)")
 
 
 @mcp.tool()
@@ -156,6 +159,91 @@ async def find_flow_by_name(flow_name: str) -> str:
         return f"Fout bij zoeken flows: {str(e)}"
 
 
+@mcp.tool()
+async def set_thermostat_temperature(device_id: str, temperature: float) -> str:
+    """Zet de gewenste temperatuur van een thermostaat."""
+    try:
+        arguments = {"device_id": device_id, "temperature": temperature}
+        result = await device_tools.handle_set_thermostat_temperature(arguments)
+        return result[0].text if result else "Thermostaat niet ingesteld"
+    except Exception as e:
+        logger.error(f"Fout in set_thermostat_temperature: {e}")
+        return f"Fout bij instellen thermostaat: {str(e)}"
+
+
+@mcp.tool()
+async def set_light_color(device_id: str, hue: float, saturation: float, brightness: float = None) -> str:
+    """Zet de kleur van een lamp."""
+    try:
+        arguments = {"device_id": device_id, "hue": hue, "saturation": saturation}
+        if brightness is not None:
+            arguments["brightness"] = brightness
+        result = await device_tools.handle_set_light_color(arguments)
+        return result[0].text if result else "Lamp kleur niet ingesteld"
+    except Exception as e:
+        logger.error(f"Fout in set_light_color: {e}")
+        return f"Fout bij instellen lamp kleur: {str(e)}"
+
+
+@mcp.tool()
+async def get_sensor_readings(zone_name: str, sensor_type: str = "all") -> str:
+    """Haal sensor metingen op van specifieke zone."""
+    try:
+        arguments = {"zone_name": zone_name, "sensor_type": sensor_type}
+        result = await device_tools.handle_get_sensor_readings(arguments)
+        return result[0].text if result else "Geen sensor data gevonden"
+    except Exception as e:
+        logger.error(f"Fout in get_sensor_readings: {e}")
+        return f"Fout bij ophalen sensor data: {str(e)}"
+
+
+# ====== INSIGHTS TOOLS ======
+
+@mcp.tool()
+async def get_device_insights(device_id: str, capability: str, period: str = "7d", resolution: str = "1h") -> str:
+    """Haal historical data op voor device capability over een periode."""
+    try:
+        arguments = {
+            "device_id": device_id, 
+            "capability": capability, 
+            "period": period, 
+            "resolution": resolution
+        }
+        result = await insights_tools.handle_get_device_insights(arguments)
+        return result[0].text if result else "Geen insights data gevonden"
+    except Exception as e:
+        logger.error(f"Fout in get_device_insights: {e}")
+        return f"Fout bij ophalen device insights: {str(e)}"
+
+
+@mcp.tool()
+async def get_energy_insights(period: str = "7d", device_filter: list = None, group_by: str = "device") -> str:
+    """Haal energie verbruik data op van devices."""
+    try:
+        arguments = {"period": period, "group_by": group_by}
+        if device_filter:
+            arguments["device_filter"] = device_filter
+        result = await insights_tools.handle_get_energy_insights(arguments)
+        return result[0].text if result else "Geen energie data gevonden"
+    except Exception as e:
+        logger.error(f"Fout in get_energy_insights: {e}")
+        return f"Fout bij ophalen energie insights: {str(e)}"
+
+
+@mcp.tool()
+async def get_live_insights(metrics: list = None) -> str:
+    """Real-time dashboard data voor monitoring."""
+    try:
+        arguments = {}
+        if metrics:
+            arguments["metrics"] = metrics
+        result = await insights_tools.handle_get_live_insights(arguments)
+        return result[0].text if result else "Geen live data beschikbaar"
+    except Exception as e:
+        logger.error(f"Fout in get_live_insights: {e}")
+        return f"Fout bij live insights: {str(e)}"
+
+
 async def cleanup():
     """Cleanup resources."""
     global homey_client
@@ -167,11 +255,18 @@ async def cleanup():
 async def main():
     """Main entry point."""
     try:
+        logger.info("🚀 Starting Homey MCP Server main()")
         await initialize_server()
+        logger.info("✅ Server initialized, starting stdio...")
 
         # Use stdio async to avoid event loop conflicts
         await mcp.run_stdio_async()
 
+    except Exception as e:
+        logger.error(f"❌ Error in main(): {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise
     finally:
         await cleanup()
 

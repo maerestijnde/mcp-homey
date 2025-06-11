@@ -1,194 +1,141 @@
 # Homey MCP Server
 
-Een Model Context Protocol (MCP) server voor integratie met Homey home automation systemen.
+A comprehensive Model Context Protocol (MCP) server for Homey smart home automation systems, providing seamless integration with Claude AI assistants.
 
-## ✅ Status: VOLLEDIG WERKEND
+## 🏠 Overview
 
-De server is klaar voor gebruik! Momenteel draait hij in **demo mode** vanwege token scope issues, maar alle functionaliteit werkt.
+The Homey MCP Server enables Claude AI to interact directly with your Homey Pro smart home system, offering real-time device control, automation management, and advanced analytics through natural language conversations.
+
+**Key Capabilities:**
+- 📱 **Device Control**: Control lights, thermostats, sensors, and smart appliances
+- 🔄 **Flow Management**: Trigger and manage Homey automation flows
+- 📊 **Advanced Analytics**: Historical data analysis, energy monitoring, and usage patterns
+- 🌡️ **Climate Intelligence**: Temperature and humidity monitoring across zones
+- ⚡ **Energy Insights**: Power consumption tracking and optimization recommendations
+- 📈 **Live Monitoring**: Real-time dashboard metrics and system status
 
 ## 🚀 Quick Start
 
-```bash
-cd /Users/yourname/projects/mcp-homey
-export PATH="$HOME/.local/bin:$PATH"
+### Prerequisites
 
-# Start in demo mode (AANBEVOLEN voor eerste test)
-make run-offline
+- Homey Pro device with local API access enabled
+- Python 3.11+ with uv package manager
+- Claude Desktop application
+- Valid Homey Personal Access Token
 
-# Of normale mode als je token correct is
-make run
-```
+### Installation
 
-## 🔧 Homey Personal Access Token Instellen
-
-⚠️ **BELANGRIJK**: Je huidige token heeft niet de juiste scopes!
-
-1. **Ga naar https://my.homey.app**
-2. **Settings → Advanced → API Keys** 
-3. **DELETE je huidige API key**
-4. **Create API Key** opnieuw en selecteer **ALLE scopes**:
-   - ✅ Read devices, Write devices
-   - ✅ Read flows, Write flows  
-   - ✅ Read system, Write system
-   - ✅ Alle andere beschikbare scopes
-
-5. **Update .env file:**
+1. **Clone and Setup**
    ```bash
-   HOMEY_LOCAL_ADDRESS=je-homey-ip
-   HOMEY_LOCAL_TOKEN=nieuwe-token-met-alle-scopes
-   OFFLINE_MODE=false  # Zet op false voor echte Homey
-   DEMO_MODE=false
+   git clone <repository-url>
+   cd mcp-homey
+   make install
    ```
 
-## 🎯 Beschikbare Tools
+2. **Get Homey Token**
+   - Navigate to [Homey Developer Portal](https://my.homey.app)
+   - Go to **Settings → Advanced → API Keys**
+   - Create new API Key with **all available scopes**
 
-De server heeft 8 MCP tools:
+3. **Configure Claude Desktop**
+   
+   Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+   ```json
+   {
+     "mcpServers": {
+       "homey": {
+         "command": "/path/to/mcp-homey/start_homey_mcp.sh",
+         "env": {
+           "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP",
+           "HOMEY_LOCAL_TOKEN": "your-token-here",
+           "OFFLINE_MODE": "false",
+           "DEMO_MODE": "false"
+         }
+       }
+     }
+   }
+   ```
 
-### 📱 Device Control
-- `get_devices` - Alle devices ophalen  
-- `control_device` - Specifiek device bedienen
-- `get_device_status` - Status van device ophalen
-- `find_devices_by_zone` - Devices per zone zoeken
-- `control_lights_in_zone` - Alle lichten in zone bedienen
+4. **Restart Claude Desktop and test!**
 
-### 🔄 Flow Management  
-- `get_flows` - Alle flows/automations ophalen
-- `trigger_flow` - Flow starten
-- `find_flow_by_name` - Flows op naam zoeken
+## ⚙️ Operating Modes
 
-## 🖥️ Claude Desktop Configuratie
+Switch modes by editing your Claude Desktop config and restarting Claude:
 
-Voeg toe aan `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
+### 🏠 **Normal Mode** (Real Homey)
 ```json
-{
-  "mcpServers": {
-    "homey": {
-      "command": "/Users/yourname/.local/bin/uv", 
-      "args": ["run", "python", "src/homey_mcp/__main__.py"],
-      "cwd": "/Users/yourname/Projects/mcp-homey",
-      "env": {
-        "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP",
-        "HOMEY_LOCAL_TOKEN": "je-nieuwe-token-hier"
-      }
-    }
-  }
+"env": {
+  "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP",
+  "HOMEY_LOCAL_TOKEN": "your-actual-token",
+  "OFFLINE_MODE": "false",
+  "DEMO_MODE": "false"
 }
 ```
 
-⚠️ **BELANGRIJK**: 
-- Gebruik **volledige pad** naar `uv`: `/Users/yourname/.local/bin/uv` 
-- Gebruik **directe file path**: `src/homey_mcp/__main__.py` (niet `-m homey_mcp`)
-- Gebruik **correcte project pad**: `/Users/yourname/Projects/mcp-homey` (uppercase Projects)
-- **Herstart Claude Desktop** na deze configuratie!
-
-## 🧪 Demo Mode Usage
-
-In demo mode heb je deze demo devices:
-- **Woonkamer Lamp** (light) - kan aan/uit en dimmen
-- **Temperatuur Sensor** (sensor) - meet 21.5°C
-
-En demo flows:
-- **Goedemorgen Routine** 
-- **Avond Routine**
-
-Test commando's in Claude:
+### 🧪 **Demo Mode** (Testing without Homey)
+```json
+"env": {
+  "OFFLINE_MODE": "true",
+  "DEMO_MODE": "true"
+}
 ```
-"Welke devices heb ik?"
-"Zet de woonkamer lamp aan"
-"Wat is de temperatuur in de slaapkamer?"
-"Start de goedemorgen routine"
+*Demo includes: Multi-room setup, various device types, sensors, flows, and analytics data*
+
+### 🔧 **Development Mode** 
+```json
+"env": {
+  "OFFLINE_MODE": "true",
+  "DEMO_MODE": "false"
+}
+```
+*Offline but minimal demo data*
+
+## 🛠️ Available Tools (21 total)
+
+### 📱 Device Control (8 tools)
+`get_devices` • `control_device` • `get_device_status` • `find_devices_by_zone` • `control_lights_in_zone` • `set_thermostat_temperature` • `set_light_color` • `get_sensor_readings`
+
+### 🔄 Flow Management (3 tools)  
+`get_flows` • `trigger_flow` • `find_flow_by_name`
+
+### 📊 Analytics & Insights (9 tools)
+`get_device_insights` • `get_energy_insights` • `get_zone_insights` • `get_usage_patterns` • `get_climate_insights` • `export_insights_data` • `get_automation_efficiency` • `generate_insights_report` • `get_live_insights`
+
+## 💬 Usage Examples
+
+```
+"What devices do I have?"
+"Turn on the kitchen lights at 75%"
+"Set thermostat to 22 degrees"
+"Start the evening routine"
+"Show my energy usage this month"
+"Export temperature data to CSV"
 ```
 
-## 🛠️ Development Commands
+## 🔧 Development & Debugging
 
 ```bash
-# Installatie
-make install           # Install dependencies
+# Manual testing
+export OFFLINE_MODE="true" DEMO_MODE="true"
+./start_homey_mcp.sh
 
-# Testen
-make test              # Run unit tests
-make test-server       # Test MCP server functionality
-make test-connection   # Test Homey verbinding
+# Development commands  
+make install test lint format
+python test_capabilities.py
+python test_insights.py
 
-# Code quality  
-make format            # Format code
-make lint              # Check code quality
-
-# Development
-make run-offline       # Demo mode
-make run               # Normale mode
-make run-dev           # Run with debug logging
-make inspector         # MCP Inspector voor debugging
-
-# Utilities
-make clean             # Clean build artifacts
-make help              # Show all available commands
+# Debugging
+tail -f homey_mcp_debug.log
+make inspector  # Web UI at localhost:5173
 ```
 
 ## 🔍 Troubleshooting
 
-### ❌ "uv: command not found" error bij make commando's
-**Probleem**: Makefile kan `uv` niet vinden in PATH  
-**Oplossing**: ✅ **FIXED!** - Makefile is bijgewerkt met correcte PATH handling
-- Alle Makefile targets gebruiken nu `$$HOME` in plaats van `$HOME`
-- Geen handmatige PATH export meer nodig
-
-### ❌ "Missing Scopes" error
-→ Maak nieuwe API key aan met ALLE scopes
-
-### ❌ Connection timeout  
-→ Check Homey IP adres en netwerk verbinding
-
-### ❌ "Unauthorized" error
-→ Check Personal Access Token
-
-### ✅ Gebruik offline mode voor testing
-```bash
-make run-offline
-```
-
-### 🔧 Handmatige uv installatie (indien nodig)
-```bash
-# Installeer uv als het ontbreekt
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc  # of restart terminal
-```
-
-## 📊 Project Structure
-
-```
-mcp-homey/
-├── src/homey_mcp/           # Hoofdcode
-│   ├── server.py            # MCP server (8 tools)
-│   ├── homey_client.py      # Homey API client
-│   ├── config.py            # Configuratie
-│   └── tools/               # Tool implementations
-├── tests/                   # Unit tests  
-├── .env                     # Configuratie (demo mode)
-├── Makefile                 # Development commands
-└── README.md               # Deze documentatie
-```
-
-## 🔄 Recent Updates
-
-### v1.1 - Makefile Fixes (Juni 2025)
-- ✅ **Fixed**: Makefile PATH handling voor `uv` command
-- ✅ **Fixed**: Correcte variable escaping (`$$HOME` in plaats van `$HOME`)
-- ✅ **Added**: Nieuwe troubleshooting sectie
-- ✅ **Added**: Volledige command overzicht in documentation
-
-### v1.0 - Initial Release
-- ✅ 8 MCP tools voor Homey integratie
-- ✅ Demo mode voor offline testing
-- ✅ Volledige Claude Desktop integratie
-
-## 🎉 Success!
-
-Je Homey MCP Server is volledig operationeel! De offline/demo mode werkt perfect en zodra je de token scopes hebt gefixed, werkt het ook met je echte Homey systeem.
-
-**Volgende stap**: Configureer Claude Desktop en test de integratie! 🚀
+**❌ Configuration issues** → Check path to `start_homey_mcp.sh` and file permissions  
+**❌ Missing scopes** → Create API key with ALL scopes at [my.homey.app](https://my.homey.app)  
+**❌ Connection timeout** → Verify Homey IP and network connectivity  
+**❌ Unauthorized** → Check token validity and expiration
 
 ---
 
-**💡 Pro Tip**: Gebruik `make help` om alle beschikbare commando's te zien!
+**Built with ❤️ for the Homey community**
