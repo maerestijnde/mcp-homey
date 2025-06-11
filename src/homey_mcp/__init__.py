@@ -2,4 +2,4 @@
 
 __version__ = "2.0.0"
 __author__ = "Stijn De Maere"
-__description__ = "MCP Server voor Homey Home Automation met uitgebreide capabilities support"
+__description__ = "MCP Server for Homey Home Automation with comprehensive capabilities support"

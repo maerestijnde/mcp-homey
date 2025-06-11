@@ -1,7 +1,7 @@
 [project]
 name = "homey-mcp-server"
 version = "0.1.0"
-description = "MCP Server voor Homey Home Automation"
+description = "MCP Server for Homey Home Automation"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

@@ -11,36 +11,36 @@ class DeviceControlTools:
         self.homey_client = homey_client
 
     def get_tools(self) -> List[Tool]:
-        """Geef alle device control tools terug."""
+        """Return all device control tools."""
         return [
             Tool(
                 name="get_devices",
-                description="Haal alle Homey devices op met hun huidige status",
+                description="Get all Homey devices with their current status",
                 inputSchema={"type": "object", "properties": {}, "required": []},
             ),
             Tool(
                 name="control_device",
-                description="Bedien een Homey device door een capability waarde te zetten",
+                description="Control a Homey device by setting a capability value",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "device_id": {"type": "string", "description": "Het ID van het device"},
+                        "device_id": {"type": "string", "description": "The device ID"},
                         "capability": {
                             "type": "string", 
-                            "description": "De capability om te bedienen. Voorbeelden:\n" +
-                                         "- onoff: true/false (aan/uit)\n" +
-                                         "- dim: 0.0-1.0 of 0-100% (helderheid)\n" +
-                                         "- target_temperature: number (gewenste temp in °C)\n" +
-                                         "- light_hue: 0.0-1.0 (kleur)\n" +
-                                         "- light_saturation: 0.0-1.0 (verzadiging)\n" +
-                                         "- light_temperature: 0.0-1.0 (warm-koud wit)\n" +
-                                         "- light_mode: 'color' of 'temperature'",
+                            "description": "The capability to control. Examples:\n" +
+                                         "- onoff: true/false (on/off)\n" +
+                                         "- dim: 0.0-1.0 or 0-100% (brightness)\n" +
+                                         "- target_temperature: number (desired temp in °C)\n" +
+                                         "- light_hue: 0.0-1.0 (color)\n" +
+                                         "- light_saturation: 0.0-1.0 (saturation)\n" +
+                                         "- light_temperature: 0.0-1.0 (warm-cold white)\n" +
+                                         "- light_mode: 'color' or 'temperature'",
                         },
                         "value": {
-                            "description": "De waarde om te zetten. Let op types:\n" +
-                                         "- boolean voor onoff, alarm_*\n" +
-                                         "- number 0.0-1.0 voor dim, light_* (of 0-100% wordt automatisch geconverteerd)\n" +
-                                         "- number voor temperaturen, power, etc."
+                            "description": "The value to set. Note types:\n" +
+                                         "- boolean for onoff, alarm_*\n" +
+                                         "- number 0.0-1.0 for dim, light_* (or 0-100% will be auto-converted)\n" +
+                                         "- number for temperatures, power, etc."
                         },
                     },
                     "required": ["device_id", "capability", "value"],
@@ -48,28 +48,28 @@ class DeviceControlTools:
             ),
             Tool(
                 name="get_device_status",
-                description="Haal de status op van een specifiek device",
+                description="Get the status of a specific device",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "device_id": {"type": "string", "description": "Het ID van het device"}
+                        "device_id": {"type": "string", "description": "The device ID"}
                     },
                     "required": ["device_id"],
                 },
             ),
             Tool(
                 name="find_devices_by_zone",
-                description="Zoek devices in een specifieke zone",
+                description="Find devices in a specific zone",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "zone_name": {
                             "type": "string",
-                            "description": "Naam van de zone (bv. 'Woonkamer', 'Slaapkamer')",
+                            "description": "Zone name (e.g. 'Living Room', 'Bedroom')",
                         },
                         "device_class": {
                             "type": "string",
-                            "description": "Optioneel: filter op device class (bv. 'light', 'sensor')",
+                            "description": "Optional: filter by device class (e.g. 'light', 'sensor')",
                         },
                     },
                     "required": ["zone_name"],
@@ -77,27 +77,27 @@ class DeviceControlTools:
             ),
             Tool(
                 name="control_lights_in_zone",
-                description="Bedien alle lichten in een zone",
+                description="Control all lights in a zone",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "zone_name": {"type": "string", "description": "Naam van de zone"},
+                        "zone_name": {"type": "string", "description": "Zone name"},
                         "action": {
                             "type": "string",
                             "enum": ["on", "off", "toggle"],
-                            "description": "Actie: 'on', 'off' of 'toggle'",
+                            "description": "Action: 'on', 'off' or 'toggle'",
                         },
                         "brightness": {
                             "type": "number",
                             "minimum": 1,
                             "maximum": 100,
-                            "description": "Helderheid percentage (1-100%). Werkt alleen bij 'on' actie.",
+                            "description": "Brightness percentage (1-100%). Only works with 'on' action.",
                         },
                         "color_temperature": {
                             "type": "number", 
                             "minimum": 0,
                             "maximum": 100,
-                            "description": "Optioneel: kleurtemperatuur percentage (0=warm, 100=koud wit)",
+                            "description": "Optional: color temperature percentage (0=warm, 100=cold white)",
                         },
                     },
                     "required": ["zone_name", "action"],
@@ -105,16 +105,16 @@ class DeviceControlTools:
             ),
             Tool(
                 name="set_thermostat_temperature",
-                description="Zet de gewenste temperatuur van een thermostaat",
+                description="Set the desired temperature of a thermostat",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "device_id": {"type": "string", "description": "Het ID van de thermostaat"},
+                        "device_id": {"type": "string", "description": "The thermostat device ID"},
                         "temperature": {
                             "type": "number",
                             "minimum": 5,
                             "maximum": 35,
-                            "description": "Gewenste temperatuur in graden Celsius"
+                            "description": "Desired temperature in degrees Celsius"
                         },
                     },
                     "required": ["device_id", "temperature"],
@@ -122,28 +122,28 @@ class DeviceControlTools:
             ),
             Tool(
                 name="set_light_color",
-                description="Zet de kleur van een lamp",
+                description="Set the color of a light",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "device_id": {"type": "string", "description": "Het ID van de lamp"},
+                        "device_id": {"type": "string", "description": "The light device ID"},
                         "hue": {
                             "type": "number",
                             "minimum": 0,
                             "maximum": 360,
-                            "description": "Kleur in graden (0=rood, 120=groen, 240=blauw)"
+                            "description": "Color in degrees (0=red, 120=green, 240=blue)"
                         },
                         "saturation": {
                             "type": "number",
                             "minimum": 0,
                             "maximum": 100,
-                            "description": "Verzadiging percentage (0=wit, 100=volledig verzadigd)"
+                            "description": "Saturation percentage (0=white, 100=fully saturated)"
                         },
                         "brightness": {
                             "type": "number",
                             "minimum": 1,
                             "maximum": 100,
-                            "description": "Optioneel: helderheid percentage"
+                            "description": "Optional: brightness percentage"
                         },
                     },
                     "required": ["device_id", "hue", "saturation"],
@@ -151,15 +151,15 @@ class DeviceControlTools:
             ),
             Tool(
                 name="get_sensor_readings",
-                description="Haal sensor metingen op van specifieke zone",
+                description="Get sensor readings from a specific zone",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "zone_name": {"type": "string", "description": "Naam van de zone"},
+                        "zone_name": {"type": "string", "description": "Zone name"},
                         "sensor_type": {
                             "type": "string",
                             "enum": ["temperature", "humidity", "battery", "power", "all"],
-                            "description": "Type sensor data (optioneel, standaard 'all')"
+                            "description": "Sensor data type (optional, defaults to 'all')"
                         },
                     },
                     "required": ["zone_name"],
@@ -168,11 +168,11 @@ class DeviceControlTools:
         ]
 
     async def handle_get_devices(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor get_devices tool."""
+        """Handler for get_devices tool."""
         try:
             devices = await self.homey_client.get_devices()
 
-            # Format voor mooie output
+            # Format for nice output
             device_list = []
             for device_id, device in devices.items():
                 device_info = {
@@ -188,46 +188,46 @@ class DeviceControlTools:
             return [
                 TextContent(
                     type="text",
-                    text=f"Gevonden {len(device_list)} devices:\n\n"
+                    text=f"Found {len(device_list)} devices:\n\n"
                     + json.dumps(device_list, indent=2, ensure_ascii=False),
                 )
             ]
         except Exception as e:
-            return [TextContent(type="text", text=f"Fout bij ophalen devices: {str(e)}")]
+            return [TextContent(type="text", text=f"Error getting devices: {str(e)}")]
 
     async def handle_control_device(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor control_device tool."""
+        """Handler for control_device tool."""
         try:
             device_id = arguments["device_id"]
             capability = arguments["capability"]
             value = arguments["value"]
 
-            # Haal device info op voor naam
+            # Get device info for name
             device = await self.homey_client.get_device(device_id)
             device_name = device.get("name", device_id)
 
-            # Zet capability
+            # Set capability
             success = await self.homey_client.set_capability_value(device_id, capability, value)
 
             if success:
                 return [
                     TextContent(
                         type="text",
-                        text=f"✅ Device '{device_name}' capability '{capability}' is gezet naar '{value}'",
+                        text=f"✅ Device '{device_name}' capability '{capability}' set to '{value}'",
                     )
                 ]
             else:
                 return [
                     TextContent(
-                        type="text", text=f"❌ Kon capability van '{device_name}' niet zetten"
+                        type="text", text=f"❌ Could not set capability of '{device_name}'"
                     )
                 ]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Fout bij bedienen device: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error controlling device: {str(e)}")]
 
     async def handle_get_device_status(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor get_device_status tool."""
+        """Handler for get_device_status tool."""
         try:
             device_id = arguments["device_id"]
             device = await self.homey_client.get_device(device_id)
@@ -240,7 +240,7 @@ class DeviceControlTools:
                 "capabilities": {},
             }
 
-            # Haal capability values op
+            # Get capability values
             capabilities_obj = device.get("capabilitiesObj", {})
             for cap_name, cap_data in capabilities_obj.items():
                 if isinstance(cap_data, dict) and "value" in cap_data:
@@ -252,16 +252,16 @@ class DeviceControlTools:
             return [
                 TextContent(
                     type="text",
-                    text=f"Status van '{device.get('name')}':\n\n"
+                    text=f"Status of '{device.get('name')}':\n\n"
                     + json.dumps(status, indent=2, ensure_ascii=False),
                 )
             ]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Fout bij ophalen device status: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error getting device status: {str(e)}")]
 
     async def handle_find_devices_by_zone(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor find_devices_by_zone tool."""
+        """Handler for find_devices_by_zone tool."""
         try:
             zone_name = arguments["zone_name"].lower()
             device_class = arguments.get("device_class")
@@ -287,7 +287,7 @@ class DeviceControlTools:
                 return [
                     TextContent(
                         type="text",
-                        text=f"Gevonden {len(matching_devices)} devices in '{arguments['zone_name']}':\n\n"
+                        text=f"Found {len(matching_devices)} devices in '{arguments['zone_name']}':\n\n"
                         + json.dumps(matching_devices, indent=2, ensure_ascii=False),
                     )
                 ]
@@ -295,15 +295,15 @@ class DeviceControlTools:
                 return [
                     TextContent(
                         type="text",
-                        text=f"Geen devices gevonden in zone '{arguments['zone_name']}'",
+                        text=f"No devices found in zone '{arguments['zone_name']}'",
                     )
                 ]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Fout bij zoeken devices: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error searching devices: {str(e)}")]
 
     async def handle_control_lights_in_zone(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor control_lights_in_zone tool."""
+        """Handler for control_lights_in_zone tool."""
         try:
             zone_name = arguments["zone_name"].lower()
             action = arguments["action"]
@@ -312,7 +312,7 @@ class DeviceControlTools:
 
             devices = await self.homey_client.get_devices()
 
-            # Zoek lichten in de zone
+            # Find lights in the zone
             lights = []
             for device_id, device in devices.items():
                 device_zone = device.get("zoneName", "").lower()
@@ -325,7 +325,7 @@ class DeviceControlTools:
                 return [
                     TextContent(
                         type="text",
-                        text=f"Geen lichten gevonden in zone '{arguments['zone_name']}'",
+                        text=f"No lights found in zone '{arguments['zone_name']}'",
                     )
                 ]
 
@@ -335,111 +335,110 @@ class DeviceControlTools:
                 capabilities = device.get("capabilitiesObj", {})
 
                 try:
-                    # GECORRIGEERDE CAPABILITY LOGIC:
                     if action == "on":
-                        # Zet brightness eerst (als opgegeven) 
+                        # Set brightness first (if specified) 
                         if brightness is not None and "dim" in capabilities:
-                            # KRITIEKE FIX: Converteer percentage naar 0.0-1.0 (minimum 1% om aan te blijven)
+                            # Convert percentage to 0.0-1.0 (minimum 1% to stay on)
                             dim_value = max(0.01, brightness / 100.0)
                             await self.homey_client.set_capability_value(device_id, "dim", dim_value)
                             
-                            # Volgens Homey regel: dim > 0 betekent automatisch onoff = True
+                            # According to Homey rule: dim > 0 means onoff = True automatically
                             await self.homey_client.set_capability_value(device_id, "onoff", True)
                             
-                            result_text = f"✅ {device_name}: aangezet ({brightness}%)"
+                            result_text = f"✅ {device_name}: turned on ({brightness}%)"
                         else:
-                            # Alleen aan/uit zonder brightness
+                            # Only on/off without brightness
                             await self.homey_client.set_capability_value(device_id, "onoff", True)
-                            result_text = f"✅ {device_name}: aangezet"
+                            result_text = f"✅ {device_name}: turned on"
                         
-                        # Zet kleurtemperatuur (als opgegeven en ondersteund)
+                        # Set color temperature (if specified and supported)
                         if color_temperature is not None and "light_temperature" in capabilities:
-                            temp_value = color_temperature / 100.0  # 0-100% naar 0.0-1.0
+                            temp_value = color_temperature / 100.0  # 0-100% to 0.0-1.0
                             await self.homey_client.set_capability_value(device_id, "light_temperature", temp_value)
                             result_text += f" (temp: {color_temperature}%)"
                         
                         results.append(result_text)
                             
                     elif action == "off":
-                        # Volgens Homey regel: onoff heeft voorrang
+                        # According to Homey rule: onoff takes precedence
                         await self.homey_client.set_capability_value(device_id, "onoff", False)
-                        results.append(f"✅ {device_name}: uitgezet")
+                        results.append(f"✅ {device_name}: turned off")
                     
                     elif action == "toggle":
                         # Toggle on/off state
                         current_state = capabilities.get("onoff", {}).get("value", False)
                         new_state = not current_state
                         await self.homey_client.set_capability_value(device_id, "onoff", new_state)
-                        state_text = "aangezet" if new_state else "uitgezet"
+                        state_text = "turned on" if new_state else "turned off"
                         results.append(f"✅ {device_name}: {state_text}")
 
                 except Exception as e:
-                    results.append(f"❌ {device_name}: fout - {str(e)}")
+                    results.append(f"❌ {device_name}: error - {str(e)}")
 
             return [
                 TextContent(
                     type="text",
-                    text=f"Lichten in '{arguments['zone_name']}' bediend:\n\n" + "\n".join(results),
+                    text=f"Lights in '{arguments['zone_name']}' controlled:\n\n" + "\n".join(results),
                 )
             ]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Fout bij bedienen lichten: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error controlling lights: {str(e)}")]
 
     async def handle_set_thermostat_temperature(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor set_thermostat_temperature tool."""
+        """Handler for set_thermostat_temperature tool."""
         try:
             device_id = arguments["device_id"]
             temperature = arguments["temperature"]
 
-            # Haal device info op
+            # Get device info
             device = await self.homey_client.get_device(device_id)
             device_name = device.get("name", device_id)
             device_class = device.get("class")
 
-            # Check of het een thermostaat is
+            # Check if it's a thermostat
             if device_class != "thermostat":
-                return [TextContent(type="text", text=f"❌ Device '{device_name}' is geen thermostaat (class: {device_class})")]
+                return [TextContent(type="text", text=f"❌ Device '{device_name}' is not a thermostat (class: {device_class})")]
 
-            # Check of target_temperature capability bestaat
+            # Check if target_temperature capability exists
             capabilities = device.get("capabilitiesObj", {})
             if "target_temperature" not in capabilities:
-                return [TextContent(type="text", text=f"❌ Thermostaat '{device_name}' heeft geen target_temperature capability")]
+                return [TextContent(type="text", text=f"❌ Thermostat '{device_name}' has no target_temperature capability")]
 
-            # Zet de gewenste temperatuur
+            # Set the desired temperature
             await self.homey_client.set_capability_value(device_id, "target_temperature", temperature)
 
-            # Haal huidige temperatuur op als beschikbaar
+            # Get current temperature if available
             current_temp = capabilities.get("measure_temperature", {}).get("value")
-            current_text = f" (huidig: {current_temp}°C)" if current_temp is not None else ""
+            current_text = f" (current: {current_temp}°C)" if current_temp is not None else ""
 
             return [TextContent(
                 type="text",
-                text=f"✅ Thermostaat '{device_name}' ingesteld op {temperature}°C{current_text}"
+                text=f"✅ Thermostat '{device_name}' set to {temperature}°C{current_text}"
             )]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Fout bij instellen thermostaat: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error setting thermostat: {str(e)}")]
 
     async def handle_set_light_color(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor set_light_color tool."""
+        """Handler for set_light_color tool."""
         try:
             device_id = arguments["device_id"]
             hue_degrees = arguments["hue"]  # 0-360
             saturation_percent = arguments["saturation"]  # 0-100
             brightness_percent = arguments.get("brightness")  # Optional 0-100
 
-            # Haal device info op
+            # Get device info
             device = await self.homey_client.get_device(device_id)
             device_name = device.get("name", device_id)
             device_class = device.get("class")
             capabilities = device.get("capabilitiesObj", {})
 
-            # Check of het een lamp is
+            # Check if it's a light
             if device_class != "light":
-                return [TextContent(type="text", text=f"❌ Device '{device_name}' is geen lamp (class: {device_class})")]
+                return [TextContent(type="text", text=f"❌ Device '{device_name}' is not a light (class: {device_class})")]
 
-            # Check kleur capabilities
+            # Check color capabilities
             missing_caps = []
             if "light_hue" not in capabilities:
                 missing_caps.append("light_hue")
@@ -447,52 +446,52 @@ class DeviceControlTools:
                 missing_caps.append("light_saturation")
             
             if missing_caps:
-                return [TextContent(type="text", text=f"❌ Lamp '{device_name}' heeft geen kleur ondersteuning (missing: {', '.join(missing_caps)})")]
+                return [TextContent(type="text", text=f"❌ Light '{device_name}' has no color support (missing: {', '.join(missing_caps)})")]
 
-            # Converteer waarden naar Homey formaat
-            hue_value = hue_degrees / 360.0  # 0-360° naar 0.0-1.0
-            saturation_value = saturation_percent / 100.0  # 0-100% naar 0.0-1.0
+            # Convert values to Homey format
+            hue_value = hue_degrees / 360.0  # 0-360° to 0.0-1.0
+            saturation_value = saturation_percent / 100.0  # 0-100% to 0.0-1.0
 
-            # Zet kleur mode naar color
+            # Set color mode to color
             if "light_mode" in capabilities:
                 await self.homey_client.set_capability_value(device_id, "light_mode", "color")
 
-            # Zet kleur properties
+            # Set color properties
             await self.homey_client.set_capability_value(device_id, "light_hue", hue_value)
             await self.homey_client.set_capability_value(device_id, "light_saturation", saturation_value)
 
-            result_text = f"✅ Lamp '{device_name}' kleur ingesteld (hue: {hue_degrees}°, verzadiging: {saturation_percent}%"
+            result_text = f"✅ Light '{device_name}' color set (hue: {hue_degrees}°, saturation: {saturation_percent}%"
 
-            # Zet brightness als opgegeven
+            # Set brightness if specified
             if brightness_percent is not None and "dim" in capabilities:
                 brightness_value = max(0.01, brightness_percent / 100.0)
                 await self.homey_client.set_capability_value(device_id, "dim", brightness_value)
                 await self.homey_client.set_capability_value(device_id, "onoff", True)
-                result_text += f", helderheid: {brightness_percent}%"
+                result_text += f", brightness: {brightness_percent}%"
 
             result_text += ")"
 
             return [TextContent(type="text", text=result_text)]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Fout bij instellen lamp kleur: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error setting light color: {str(e)}")]
 
     async def handle_get_sensor_readings(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler voor get_sensor_readings tool."""
+        """Handler for get_sensor_readings tool."""
         try:
             zone_name = arguments["zone_name"].lower()
             sensor_type = arguments.get("sensor_type", "all")
 
             devices = await self.homey_client.get_devices()
 
-            # Zoek sensors in de zone
+            # Find sensors in the zone
             sensors = []
             for device_id, device in devices.items():
                 device_zone = device.get("zoneName", "").lower()
                 capabilities = device.get("capabilitiesObj", {})
 
                 if zone_name in device_zone:
-                    # Check of device sensor capabilities heeft
+                    # Check if device has sensor capabilities
                     sensor_caps = {}
                     for cap_name, cap_data in capabilities.items():
                         if cap_name.startswith("measure_") or cap_name.startswith("alarm_"):
@@ -510,11 +509,11 @@ class DeviceControlTools:
             if not sensors:
                 return [TextContent(
                     type="text",
-                    text=f"Geen sensors gevonden in zone '{arguments['zone_name']}'"
+                    text=f"No sensors found in zone '{arguments['zone_name']}'"
                 )]
 
             # Format sensor data
-            result_lines = [f"Sensor metingen in '{arguments['zone_name']}':"]
+            result_lines = [f"Sensor readings in '{arguments['zone_name']}':"]
             
             for sensor in sensors:
                 result_lines.append(f"\n📊 {sensor['name']} ({sensor['class']}):")
@@ -533,7 +532,7 @@ class DeviceControlTools:
                     elif cap_name.startswith("measure_power"):
                         formatted_value = f"{value}W"
                     elif cap_name.startswith("alarm_"):
-                        formatted_value = "🚨 ACTIEF" if value else "✅ OK"
+                        formatted_value = "🚨 ACTIVE" if value else "✅ OK"
                     else:
                         formatted_value = str(value)
                     
@@ -542,4 +541,4 @@ class DeviceControlTools:
             return [TextContent(type="text", text="\n".join(result_lines))]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Fout bij ophalen sensor data: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error getting sensor data: {str(e)}")]

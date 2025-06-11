@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Entry point voor Homey MCP Server v3.0 with insights support.
+Entry point for Homey MCP Server v3.0 with insights support.
 """
 import asyncio
 import logging
@@ -37,7 +37,7 @@ async def run_server():
 
     except KeyboardInterrupt:
         logger = logging.getLogger(__name__)
-        logger.info("Server gestopt door gebruiker")
+        logger.info("Server stopped by user")
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"❌ Server error in __main__.py: {e}", exc_info=True)

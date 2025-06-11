@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Create FastMCP server instance
 mcp = FastMCP("Homey Integration Server")
 
-# Global variables voor tools
+# Global variables for tools
 homey_client = None
 device_tools = None
 flow_tools = None
@@ -23,14 +23,14 @@ insights_tools = None
 
 
 async def initialize_server():
-    """Initialiseer de server en tools."""
+    """Initialize the server and tools."""
     global homey_client, device_tools, flow_tools, insights_tools
 
-    logger.info("🚀 Initialiseren Homey MCP Server...")
+    logger.info("🚀 Initializing Homey MCP Server...")
 
-    # Setup configuratie
+    # Setup configuration
     config = get_config()
-    logger.info(f"📋 Configuratie geladen:")
+    logger.info(f"📋 Configuration loaded:")
     logger.info(f"   - Homey IP: {config.homey_local_address}")
     logger.info(f"   - Token: {config.homey_local_token[:20]}...")
     logger.info(f"   - Offline mode: {config.offline_mode}")
@@ -43,14 +43,14 @@ async def initialize_server():
         await homey_client.connect()
     except Exception as e:
         if config.offline_mode or config.demo_mode:
-            logger.warning("⚠️  Homey verbinding gefaald, maar demo/offline mode actief")
+            logger.warning("⚠️  Homey connection failed, but demo/offline mode active")
         else:
-            logger.error("❌ Homey verbinding gefaald! Probeer:")
-            logger.error("   1. Check je .env file configuratie")
+            logger.error("❌ Homey connection failed! Try:")
+            logger.error("   1. Check your .env file configuration")
             logger.error(
-                "   2. Test handmatig: curl -H 'Authorization: Bearer TOKEN' http://IP/api/manager/system"
+                "   2. Test manually: curl -H 'Authorization: Bearer TOKEN' http://IP/api/manager/system"
             )
-            logger.error("   3. Of gebruik offline mode: OFFLINE_MODE=true")
+            logger.error("   3. Or use offline mode: OFFLINE_MODE=true")
             raise
 
     # Setup tools
@@ -58,150 +58,150 @@ async def initialize_server():
     flow_tools = FlowManagementTools(homey_client)
     insights_tools = InsightsTools(homey_client)
 
-    logger.info("✅ Homey MCP Server geïnitialiseerd met 15 tools (12 device/flow + 3 insights)")
+    logger.info("✅ Homey MCP Server initialized with 15 tools (12 device/flow + 3 insights)")
 
 
 @mcp.tool()
 async def get_devices() -> str:
-    """Haal alle Homey devices op met hun huidige status."""
+    """Get all Homey devices with their current status."""
     try:
         result = await device_tools.handle_get_devices({})
-        return result[0].text if result else "Geen devices gevonden"
+        return result[0].text if result else "No devices found"
     except Exception as e:
-        logger.error(f"Fout in get_devices: {e}")
-        return f"Fout bij ophalen devices: {str(e)}"
+        logger.error(f"Error in get_devices: {e}")
+        return f"Error getting devices: {str(e)}"
 
 
 @mcp.tool()
 async def control_device(device_id: str, capability: str, value: str | int | float | bool) -> str:
-    """Bedien een Homey device door een capability waarde te zetten."""
+    """Control a Homey device by setting a capability value."""
     try:
         arguments = {"device_id": device_id, "capability": capability, "value": value}
         result = await device_tools.handle_control_device(arguments)
-        return result[0].text if result else "Geen resultaat"
+        return result[0].text if result else "No result"
     except Exception as e:
-        logger.error(f"Fout in control_device: {e}")
-        return f"Fout bij bedienen device: {str(e)}"
+        logger.error(f"Error in control_device: {e}")
+        return f"Error controlling device: {str(e)}"
 
 
 @mcp.tool()
 async def get_device_status(device_id: str) -> str:
-    """Haal de status op van een specifiek device."""
+    """Get the status of a specific device."""
     try:
         arguments = {"device_id": device_id}
         result = await device_tools.handle_get_device_status(arguments)
-        return result[0].text if result else "Geen status gevonden"
+        return result[0].text if result else "No status found"
     except Exception as e:
-        logger.error(f"Fout in get_device_status: {e}")
-        return f"Fout bij ophalen device status: {str(e)}"
+        logger.error(f"Error in get_device_status: {e}")
+        return f"Error getting device status: {str(e)}"
 
 
 @mcp.tool()
 async def find_devices_by_zone(zone_name: str, device_class: str = None) -> str:
-    """Zoek devices in een specifieke zone."""
+    """Find devices in a specific zone."""
     try:
         arguments = {"zone_name": zone_name}
         if device_class:
             arguments["device_class"] = device_class
         result = await device_tools.handle_find_devices_by_zone(arguments)
-        return result[0].text if result else "Geen devices gevonden"
+        return result[0].text if result else "No devices found"
     except Exception as e:
-        logger.error(f"Fout in find_devices_by_zone: {e}")
-        return f"Fout bij zoeken devices: {str(e)}"
+        logger.error(f"Error in find_devices_by_zone: {e}")
+        return f"Error searching devices: {str(e)}"
 
 
 @mcp.tool()
 async def control_lights_in_zone(zone_name: str, action: str, brightness: int = None) -> str:
-    """Bedien alle lichten in een zone."""
+    """Control all lights in a zone."""
     try:
         arguments = {"zone_name": zone_name, "action": action}
         if brightness is not None:
             arguments["brightness"] = brightness
         result = await device_tools.handle_control_lights_in_zone(arguments)
-        return result[0].text if result else "Geen lichten gevonden"
+        return result[0].text if result else "No lights found"
     except Exception as e:
-        logger.error(f"Fout in control_lights_in_zone: {e}")
-        return f"Fout bij bedienen lichten: {str(e)}"
+        logger.error(f"Error in control_lights_in_zone: {e}")
+        return f"Error controlling lights: {str(e)}"
 
 
 @mcp.tool()
 async def get_flows() -> str:
-    """Haal alle Homey flows (automation) op."""
+    """Get all Homey flows (automation)."""
     try:
         result = await flow_tools.handle_get_flows({})
-        return result[0].text if result else "Geen flows gevonden"
+        return result[0].text if result else "No flows found"
     except Exception as e:
-        logger.error(f"Fout in get_flows: {e}")
-        return f"Fout bij ophalen flows: {str(e)}"
+        logger.error(f"Error in get_flows: {e}")
+        return f"Error getting flows: {str(e)}"
 
 
 @mcp.tool()
 async def trigger_flow(flow_id: str) -> str:
-    """Start een specifieke Homey flow."""
+    """Start a specific Homey flow."""
     try:
         arguments = {"flow_id": flow_id}
         result = await flow_tools.handle_trigger_flow(arguments)
-        return result[0].text if result else "Flow niet gestart"
+        return result[0].text if result else "Flow not started"
     except Exception as e:
-        logger.error(f"Fout in trigger_flow: {e}")
-        return f"Fout bij starten flow: {str(e)}"
+        logger.error(f"Error in trigger_flow: {e}")
+        return f"Error starting flow: {str(e)}"
 
 
 @mcp.tool()
 async def find_flow_by_name(flow_name: str) -> str:
-    """Zoek flows op basis van naam."""
+    """Search flows by name."""
     try:
         arguments = {"flow_name": flow_name}
         result = await flow_tools.handle_find_flow_by_name(arguments)
-        return result[0].text if result else "Geen flows gevonden"
+        return result[0].text if result else "No flows found"
     except Exception as e:
-        logger.error(f"Fout in find_flow_by_name: {e}")
-        return f"Fout bij zoeken flows: {str(e)}"
+        logger.error(f"Error in find_flow_by_name: {e}")
+        return f"Error searching flows: {str(e)}"
 
 
 @mcp.tool()
 async def set_thermostat_temperature(device_id: str, temperature: float) -> str:
-    """Zet de gewenste temperatuur van een thermostaat."""
+    """Set the desired temperature of a thermostat."""
     try:
         arguments = {"device_id": device_id, "temperature": temperature}
         result = await device_tools.handle_set_thermostat_temperature(arguments)
-        return result[0].text if result else "Thermostaat niet ingesteld"
+        return result[0].text if result else "Thermostat not set"
     except Exception as e:
-        logger.error(f"Fout in set_thermostat_temperature: {e}")
-        return f"Fout bij instellen thermostaat: {str(e)}"
+        logger.error(f"Error in set_thermostat_temperature: {e}")
+        return f"Error setting thermostat: {str(e)}"
 
 
 @mcp.tool()
 async def set_light_color(device_id: str, hue: float, saturation: float, brightness: float = None) -> str:
-    """Zet de kleur van een lamp."""
+    """Set the color of a light."""
     try:
         arguments = {"device_id": device_id, "hue": hue, "saturation": saturation}
         if brightness is not None:
             arguments["brightness"] = brightness
         result = await device_tools.handle_set_light_color(arguments)
-        return result[0].text if result else "Lamp kleur niet ingesteld"
+        return result[0].text if result else "Light color not set"
     except Exception as e:
-        logger.error(f"Fout in set_light_color: {e}")
-        return f"Fout bij instellen lamp kleur: {str(e)}"
+        logger.error(f"Error in set_light_color: {e}")
+        return f"Error setting light color: {str(e)}"
 
 
 @mcp.tool()
 async def get_sensor_readings(zone_name: str, sensor_type: str = "all") -> str:
-    """Haal sensor metingen op van specifieke zone."""
+    """Get sensor readings from a specific zone."""
     try:
         arguments = {"zone_name": zone_name, "sensor_type": sensor_type}
         result = await device_tools.handle_get_sensor_readings(arguments)
-        return result[0].text if result else "Geen sensor data gevonden"
+        return result[0].text if result else "No sensor data found"
     except Exception as e:
-        logger.error(f"Fout in get_sensor_readings: {e}")
-        return f"Fout bij ophalen sensor data: {str(e)}"
+        logger.error(f"Error in get_sensor_readings: {e}")
+        return f"Error getting sensor data: {str(e)}"
 
 
 # ====== INSIGHTS TOOLS ======
 
 @mcp.tool()
 async def get_device_insights(device_id: str, capability: str, period: str = "7d", resolution: str = "1h") -> str:
-    """Haal historical data op voor device capability over een periode."""
+    """Get historical data for device capability over a period."""
     try:
         arguments = {
             "device_id": device_id, 
@@ -210,38 +210,38 @@ async def get_device_insights(device_id: str, capability: str, period: str = "7d
             "resolution": resolution
         }
         result = await insights_tools.handle_get_device_insights(arguments)
-        return result[0].text if result else "Geen insights data gevonden"
+        return result[0].text if result else "No insights data found"
     except Exception as e:
-        logger.error(f"Fout in get_device_insights: {e}")
-        return f"Fout bij ophalen device insights: {str(e)}"
+        logger.error(f"Error in get_device_insights: {e}")
+        return f"Error getting device insights: {str(e)}"
 
 
 @mcp.tool()
 async def get_energy_insights(period: str = "7d", device_filter: list = None, group_by: str = "device") -> str:
-    """Haal energie verbruik data op van devices."""
+    """Get energy consumption data from devices."""
     try:
         arguments = {"period": period, "group_by": group_by}
         if device_filter:
             arguments["device_filter"] = device_filter
         result = await insights_tools.handle_get_energy_insights(arguments)
-        return result[0].text if result else "Geen energie data gevonden"
+        return result[0].text if result else "No energy data found"
     except Exception as e:
-        logger.error(f"Fout in get_energy_insights: {e}")
-        return f"Fout bij ophalen energie insights: {str(e)}"
+        logger.error(f"Error in get_energy_insights: {e}")
+        return f"Error getting energy insights: {str(e)}"
 
 
 @mcp.tool()
 async def get_live_insights(metrics: list = None) -> str:
-    """Real-time dashboard data voor monitoring."""
+    """Real-time dashboard data for monitoring."""
     try:
         arguments = {}
         if metrics:
             arguments["metrics"] = metrics
         result = await insights_tools.handle_get_live_insights(arguments)
-        return result[0].text if result else "Geen live data beschikbaar"
+        return result[0].text if result else "No live data available"
     except Exception as e:
-        logger.error(f"Fout in get_live_insights: {e}")
-        return f"Fout bij live insights: {str(e)}"
+        logger.error(f"Error in get_live_insights: {e}")
+        return f"Error getting live insights: {str(e)}"
 
 
 async def cleanup():
@@ -249,7 +249,7 @@ async def cleanup():
     global homey_client
     if homey_client:
         await homey_client.disconnect()
-    logger.info("Homey MCP Server gestopt")
+    logger.info("Homey MCP Server stopped")
 
 
 async def main():
@@ -272,5 +272,5 @@ async def main():
 
 
 def get_server():
-    """Krijg server instance."""
+    """Get server instance."""
     return mcp
