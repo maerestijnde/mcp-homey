@@ -5,9 +5,9 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import TextContent, Tool
 
 from .config import get_config
-from .homey_client import HomeyAPIClient
+from .client import HomeyAPIClient
 from .tools import DeviceControlTools, FlowManagementTools
-from .tools.insights import InsightsTools
+from .tools import InsightsTools
 
 # Get logger (logging is configured in __main__.py)
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ async def initialize_server():
     flow_tools = FlowManagementTools(homey_client)
     insights_tools = InsightsTools(homey_client)
 
-    logger.info("✅ Homey MCP Server initialized with 15 tools (12 device/flow + 3 insights)")
+    logger.info("✅ Homey MCP Server initialized with 16 tools (8 device + 3 flow + 5 insights)")
 
 
 @mcp.tool()
@@ -117,7 +117,7 @@ async def control_lights_in_zone(zone_name: str, action: str, brightness: int = 
         arguments = {"zone_name": zone_name, "action": action}
         if brightness is not None:
             arguments["brightness"] = brightness
-        result = await device_tools.handle_control_lights_in_zone(arguments)
+        result = await device_tools.lighting.handle_control_lights_in_zone(arguments)
         return result[0].text if result else "No lights found"
     except Exception as e:
         logger.error(f"Error in control_lights_in_zone: {e}")
@@ -164,7 +164,7 @@ async def set_thermostat_temperature(device_id: str, temperature: float) -> str:
     """Set the desired temperature of a thermostat."""
     try:
         arguments = {"device_id": device_id, "temperature": temperature}
-        result = await device_tools.handle_set_thermostat_temperature(arguments)
+        result = await device_tools.climate.handle_set_thermostat_temperature(arguments)
         return result[0].text if result else "Thermostat not set"
     except Exception as e:
         logger.error(f"Error in set_thermostat_temperature: {e}")
@@ -178,7 +178,7 @@ async def set_light_color(device_id: str, hue: float, saturation: float, brightn
         arguments = {"device_id": device_id, "hue": hue, "saturation": saturation}
         if brightness is not None:
             arguments["brightness"] = brightness
-        result = await device_tools.handle_set_light_color(arguments)
+        result = await device_tools.lighting.handle_set_light_color(arguments)
         return result[0].text if result else "Light color not set"
     except Exception as e:
         logger.error(f"Error in set_light_color: {e}")
@@ -190,7 +190,7 @@ async def get_sensor_readings(zone_name: str, sensor_type: str = "all") -> str:
     """Get sensor readings from a specific zone."""
     try:
         arguments = {"zone_name": zone_name, "sensor_type": sensor_type}
-        result = await device_tools.handle_get_sensor_readings(arguments)
+        result = await device_tools.sensors.handle_get_sensor_readings(arguments)
         return result[0].text if result else "No sensor data found"
     except Exception as e:
         logger.error(f"Error in get_sensor_readings: {e}")
@@ -209,7 +209,7 @@ async def get_device_insights(device_id: str, capability: str, period: str = "7d
             "period": period, 
             "resolution": resolution
         }
-        result = await insights_tools.handle_get_device_insights(arguments)
+        result = await insights_tools.device_data.handle_get_device_insights(arguments)
         return result[0].text if result else "No insights data found"
     except Exception as e:
         logger.error(f"Error in get_device_insights: {e}")
@@ -223,7 +223,7 @@ async def get_energy_insights(period: str = "7d", device_filter: list = None, gr
         arguments = {"period": period, "group_by": group_by}
         if device_filter:
             arguments["device_filter"] = device_filter
-        result = await insights_tools.handle_get_energy_insights(arguments)
+        result = await insights_tools.energy.handle_get_energy_insights(arguments)
         return result[0].text if result else "No energy data found"
     except Exception as e:
         logger.error(f"Error in get_energy_insights: {e}")
@@ -237,11 +237,39 @@ async def get_live_insights(metrics: list = None) -> str:
         arguments = {}
         if metrics:
             arguments["metrics"] = metrics
-        result = await insights_tools.handle_get_live_insights(arguments)
+        result = await insights_tools.live.handle_get_live_insights(arguments)
         return result[0].text if result else "No live data available"
     except Exception as e:
         logger.error(f"Error in get_live_insights: {e}")
         return f"Error getting live insights: {str(e)}"
+
+
+@mcp.tool()
+async def get_energy_report_hourly(date_hour: str, cache: str = None) -> str:
+    """Get hourly energy consumption report for a specific hour."""
+    try:
+        arguments = {"date_hour": date_hour}
+        if cache:
+            arguments["cache"] = cache
+        result = await insights_tools.energy.handle_get_energy_report_hourly(arguments)
+        return result[0].text if result else "No hourly data found"
+    except Exception as e:
+        logger.error(f"Error in get_energy_report_hourly: {e}")
+        return f"Error getting hourly energy report: {str(e)}"
+
+
+@mcp.tool()
+async def get_energy_report_yearly(year: str, cache: str = None) -> str:
+    """Get yearly energy consumption report for a specific year."""
+    try:
+        arguments = {"year": year}
+        if cache:
+            arguments["cache"] = cache
+        result = await insights_tools.energy.handle_get_energy_report_yearly(arguments)
+        return result[0].text if result else "No yearly data found"
+    except Exception as e:
+        logger.error(f"Error in get_energy_report_yearly: {e}")
+        return f"Error getting yearly energy report: {str(e)}"
 
 
 async def cleanup():

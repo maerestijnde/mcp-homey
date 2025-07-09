@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 from mcp.types import TextContent, Tool
 
-from ..homey_client import HomeyAPIClient
+from ...client import HomeyAPIClient
 
 
 class FlowManagementTools:

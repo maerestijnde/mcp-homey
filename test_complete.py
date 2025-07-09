@@ -5,8 +5,8 @@ Volledig test script voor alle Homey MCP Server functionaliteiten.
 Dit script test:
 - 8 Device control tools 
 - 3 Flow management tools
-- 3 Insights tools (NIEUW!)
-Totaal: 14 tools + 1 sensor tool = 15 tools
+- 5 Insights tools (NIEUW!)
+Totaal: 16 tools
 """
 
 import asyncio
