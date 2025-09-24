@@ -9,6 +9,8 @@ class HomeyMCPConfig(BaseSettings):
     # Homey configuratie
     homey_local_address: str = "YOUR_HOMEY_IP"  # User must set this
     homey_local_token: str = "your-token-here"  # User must set this
+    homey_use_https: bool = True  # Use HTTPS for local API by default
+    homey_verify_ssl: bool = False  # Homey exposes self-signed certs, disable verify unless custom cert provided
 
     # Server configuratie
     log_level: str = "INFO"

@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Dict, List
 
 from mcp.types import TextContent, Tool
@@ -7,6 +8,9 @@ from ...client import HomeyAPIClient
 from .lighting import LightingTools
 from .climate import ClimateTools
 from .sensors import SensorTools
+
+
+logger = logging.getLogger(__name__)
 
 
 class DeviceControlTools:
@@ -64,11 +68,20 @@ class DeviceControlTools:
                 },
             ),
             Tool(
+                name="get_zones",
+                description="Get all available zones in Homey",
+                inputSchema={"type": "object", "properties": {}, "required": []},
+            ),
+            Tool(
                 name="find_devices_by_zone",
                 description="Find devices in a specific zone",
                 inputSchema={
                     "type": "object",
                     "properties": {
+                        "zone_id": {
+                            "type": "string",
+                            "description": "Optional: filter by zone ID (e.g. 'f5d6…')",
+                        },
                         "zone_name": {
                             "type": "string",
                             "description": "Zone name (e.g. 'Living Room', 'Bedroom')",
@@ -78,7 +91,7 @@ class DeviceControlTools:
                             "description": "Optional: filter by device class (e.g. 'light', 'sensor')",
                         },
                     },
-                    "required": ["zone_name"],
+                    "required": [],
                 },
             ),
         ]
@@ -116,7 +129,49 @@ class DeviceControlTools:
                 )
             ]
         except Exception as e:
-            return [TextContent(type="text", text=f"Error getting devices: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error getting devices: {str(e)}")]
+
+    async def handle_get_zones(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handler for get_zones tool."""
+        try:
+            zones = await self.homey_client.get_zones()
+
+            zone_list = []
+            for zone_id, zone in zones.items():
+                zone_info = {
+                    "id": zone_id,
+                    "name": zone.get("name"),
+                    "parent": zone.get("parent"),
+                    "icon": zone.get("icon"),
+                    "active": zone.get("active", True),
+                }
+                zone_list.append(zone_info)
+
+            # Add device count for each zone
+            for zone_info in zone_list:
+                try:
+                    zone_devices = await self.homey_client.get_zone_devices(zone_info["id"])
+                    zone_info["device_count"] = len(zone_devices)
+                    
+                    # Add device classes summary
+                    device_classes = {}
+                    for device in zone_devices:
+                        device_class = device.get("class", "unknown")
+                        device_classes[device_class] = device_classes.get(device_class, 0) + 1
+                    zone_info["device_classes"] = device_classes
+                except:
+                    zone_info["device_count"] = 0
+                    zone_info["device_classes"] = {}
+
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Found {len(zone_list)} zones:\n\n"
+                    + json.dumps(zone_list, indent=2, ensure_ascii=False),
+                )
+            ]
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error getting zones: {str(e)}")]
 
     async def handle_control_device(self, arguments: Dict[str, Any]) -> List[TextContent]:
         """Handler for control_device tool."""
@@ -183,44 +238,98 @@ class DeviceControlTools:
         except Exception as e:
             return [TextContent(type="text", text=f"❌ Error getting device status: {str(e)}")]
 
-    async def handle_find_devices_by_zone(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for find_devices_by_zone tool."""
+    async def handle_get_zones(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Get all zones by extracting them from devices (like curl approach)."""
         try:
-            zone_name = arguments["zone_name"].lower()
+            devices = await self.homey_client.get_devices()
+            zones = {}
+            
+            # Extract unique zones from all devices
+            for device_id, device in devices.items():
+                zone_id = device.get("zone")
+                zone_name = device.get("zoneName") 
+                
+                if zone_id and zone_name:
+                    if zone_id not in zones:
+                        zones[zone_id] = {
+                            "id": zone_id,
+                            "name": zone_name,
+                            "devices": []
+                        }
+                    zones[zone_id]["devices"].append({
+                        "id": device_id,
+                        "name": device.get("name"),
+                        "class": device.get("class")
+                    })
+            
+            if zones:
+                zone_list = list(zones.values())
+                return [TextContent(
+                    type="text",
+                    text=f"Found {len(zone_list)} zones:\n\n" + 
+                         json.dumps(zone_list, indent=2, ensure_ascii=False)
+                )]
+            else:
+                return [TextContent(type="text", text="No zones found")]
+                
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error getting zones: {str(e)}")]
+
+    async def handle_find_devices_by_zone(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handler for find_devices_by_zone tool - works like curl filtering."""
+        try:
+            zone_id = arguments.get("zone_id")
+            zone_name = arguments.get("zone_name") 
             device_class = arguments.get("device_class")
 
+            if not zone_id and not zone_name:
+                return [TextContent(type="text", text="❌ Please provide either 'zone_id' or 'zone_name'")]
+
+            # Get all devices (like curl does)
             devices = await self.homey_client.get_devices()
-
             matching_devices = []
-            for device_id, device in devices.items():
-                device_zone = device.get("zoneName", "").lower()
 
-                if zone_name in device_zone:
-                    if device_class is None or device.get("class") == device_class:
-                        matching_devices.append(
-                            {
-                                "id": device_id,
-                                "name": device.get("name"),
-                                "class": device.get("class"),
-                                "zone": device.get("zoneName"),
-                            }
-                        )
+            for device_id, device in devices.items():
+                # Check zone match (exactly like your curl jq filter)
+                zone_match = False
+                
+                if zone_id:
+                    # Filter by zone ID: .value.zone == $zone
+                    device_zone = device.get("zone")
+                    zone_match = device_zone == zone_id
+                elif zone_name:
+                    # Filter by zone name (partial match for user-friendliness)
+                    device_zone_name = device.get("zoneName", "").lower()
+                    zone_match = zone_name.lower() in device_zone_name
+
+                # Check device class filter (if provided)
+                class_match = True
+                if device_class:
+                    class_match = device.get("class") == device_class
+
+                # Add to results if both filters match
+                if zone_match and class_match:
+                    matching_devices.append({
+                        "key": device_id,  # Like curl output
+                        "name": device.get("name"),
+                        "class": device.get("class"), 
+                        "available": device.get("available"),
+                        "zone": device.get("zone"),
+                        "zoneName": device.get("zoneName")
+                    })
 
             if matching_devices:
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"Found {len(matching_devices)} devices in '{arguments['zone_name']}':\n\n"
-                        + json.dumps(matching_devices, indent=2, ensure_ascii=False),
-                    )
-                ]
+                filter_desc = f"zone_id='{zone_id}'" if zone_id else f"zone_name='{zone_name}'"
+                if device_class:
+                    filter_desc += f", class='{device_class}'"
+                    
+                return [TextContent(
+                    type="text", 
+                    text=f"Found {len(matching_devices)} devices ({filter_desc}):\n\n" + 
+                         json.dumps(matching_devices, indent=2, ensure_ascii=False)
+                )]
             else:
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"No devices found in zone '{arguments['zone_name']}'",
-                    )
-                ]
+                return [TextContent(type="text", text=f"No devices found matching the criteria")]
 
         except Exception as e:
             return [TextContent(type="text", text=f"❌ Error searching devices: {str(e)}")]

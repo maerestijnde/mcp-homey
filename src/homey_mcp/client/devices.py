@@ -9,6 +9,10 @@ class DeviceAPI:
     def __init__(self, client):
         self.client = client
 
+    async def get_zones(self) -> Dict[str, Any]:
+        """Get all zones via the dedicated zones API."""
+        return await self.client.zones.get_zones()
+
     async def get_devices(self) -> Dict[str, Any]:
         """Get all devices (with caching)."""
         # Demo mode data - EXTENDED AND CORRECTED
@@ -18,7 +22,8 @@ class DeviceAPI:
                     "id": "light1",
                     "name": "Living Room Lamp",
                     "class": "light",
-                    "zoneName": "Living Room", 
+                    "zone": "living-room-uuid",  # Zone UUID
+                    "zoneName": "Living Room",  # Zone name for compatibility
                     "available": True,
                     "capabilitiesObj": {
                         "onoff": {"value": False, "title": "On/Off"},
@@ -33,6 +38,7 @@ class DeviceAPI:
                     "id": "light2", 
                     "name": "Kitchen Spots",
                     "class": "light",
+                    "zone": "kitchen-uuid",  # Zone UUID
                     "zoneName": "Kitchen",
                     "available": True,
                     "capabilitiesObj": {
@@ -46,6 +52,7 @@ class DeviceAPI:
                     "id": "sensor1",
                     "name": "Temperature Sensor",
                     "class": "sensor", 
+                    "zone": "bedroom-uuid",  # Zone UUID
                     "zoneName": "Bedroom",
                     "available": True,
                     "capabilitiesObj": {
@@ -59,6 +66,7 @@ class DeviceAPI:
                     "id": "thermostat1",
                     "name": "Living Room Thermostat", 
                     "class": "thermostat",
+                    "zone": "living-room-uuid",  # Zone UUID - same as light1 
                     "zoneName": "Living Room",
                     "available": True,
                     "capabilitiesObj": {
@@ -71,6 +79,7 @@ class DeviceAPI:
                     "id": "socket1",
                     "name": "Desk Socket",
                     "class": "socket", 
+                    "zone": "office-uuid",  # Zone UUID
                     "zoneName": "Office",
                     "available": True,
                     "capabilitiesObj": {
@@ -83,20 +92,34 @@ class DeviceAPI:
             logger.info(f"Demo mode: {len(demo_devices)} demo devices")
             return demo_devices
 
-        # Check cache
+        # Check device cache
         if self.client._device_cache and time.time() - self.client._cache_timestamp < self.client.config.cache_ttl:
             return self.client._device_cache
 
         try:
-            # FIX: Voeg trailing slash toe
+            # 1. First get all zones
+            zones = await self.get_zones()
+            
+            # 2. Then get all devices
             response = await self.client.session.get("/api/manager/devices/device/")
             response.raise_for_status()
-
+            
             devices = response.json()
+            
+            # 3. Enrich devices with zone names
+            for device_id, device in devices.items():
+                zone_id = device.get("zone")
+                if zone_id and zone_id in zones:
+                    # Add the zone name to the device
+                    device["zoneName"] = zones[zone_id].get("name", "Unknown Zone")
+                else:
+                    device["zoneName"] = "No Zone"
+            
+            # Cache the enriched results
             self.client._device_cache = devices
             self.client._cache_timestamp = time.time()
 
-            logger.info(f"Devices retrieved: {len(devices)} devices")
+            logger.info(f"Devices retrieved: {len(devices)} devices with zone names")
             return devices
 
         except Exception as e:

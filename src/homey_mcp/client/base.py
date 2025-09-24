@@ -9,6 +9,7 @@ from .devices import DeviceAPI
 from .flows import FlowAPI
 from .insights import InsightsAPI
 from .energy import EnergyAPI
+from .zones import ZonesAPI
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ logger = logging.getLogger(__name__)
 class HomeyAPIClient:
     def __init__(self, config: HomeyMCPConfig):
         self.config = config
-        self.base_url = f"http://{config.homey_local_address}"
+        self._scheme = "https" if config.homey_use_https else "http"
+        self.base_url = f"{self._scheme}://{config.homey_local_address}"
         self.session: Optional[httpx.AsyncClient] = None
         self._device_cache: Dict[str, Any] = {}
         self._cache_timestamp = 0
@@ -26,6 +28,7 @@ class HomeyAPIClient:
         self.flows = FlowAPI(self)
         self.insights = InsightsAPI(self)
         self.energy = EnergyAPI(self)
+        self.zones = ZonesAPI(self)
 
     async def __aenter__(self):
         await self.connect()
@@ -46,11 +49,18 @@ class HomeyAPIClient:
             "Content-Type": "application/json",
         }
 
-        self.session = httpx.AsyncClient(
-            base_url=self.base_url,
-            headers=headers,
-            timeout=httpx.Timeout(self.config.request_timeout),
-        )
+        if self.session is None:
+            verify_ssl = self.config.homey_verify_ssl if self._scheme == "https" else True
+
+            self.session = httpx.AsyncClient(
+                base_url=self.base_url,
+                headers=headers,
+                timeout=httpx.Timeout(self.config.request_timeout),
+                verify=verify_ssl,
+            )
+
+            if self._scheme == "https" and not self.config.homey_verify_ssl:
+                logger.debug("HTTPS certificate verification disabled for Homey local API (self-signed cert)")
 
         # Test connection
         try:
@@ -100,17 +110,114 @@ class HomeyAPIClient:
     async def get_device(self, device_id: str) -> Dict[str, Any]:
         return await self.devices.get_device(device_id)
 
+    async def get_zones(self) -> Dict[str, Any]:
+        """Get all zones by extracting them from devices."""
+        devices = await self.get_devices()
+        zones = {}
+        
+        for device_id, device in devices.items():
+            zone_id = device.get("zone")
+            zone_name = device.get("zoneName")
+            
+            if zone_id and zone_name and zone_id not in zones:
+                zones[zone_id] = {
+                    "id": zone_id,
+                    "name": zone_name
+                }
+        
+        return zones
+
+    async def get_zone(self, zone_id: str) -> Dict[str, Any]:
+        """Get specific zone by ID."""
+        zones = await self.get_zones()
+        if zone_id not in zones:
+            raise ValueError(f"Zone {zone_id} not found")
+        return zones[zone_id]
+
+    async def find_zone_by_name(self, zone_name: str) -> Dict[str, Any]:
+        """Find zone by name (partial match)."""
+        zones = await self.get_zones()
+        zone_name_lower = zone_name.lower()
+        
+        for zone_id, zone in zones.items():
+            if zone_name_lower in zone.get("name", "").lower():
+                return zone
+        return None
+
     def validate_capability_value(self, capability: str, value: Any) -> tuple[bool, Any, str]:
         return self.devices.validate_capability_value(capability, value)
 
     async def set_capability_value(self, device_id: str, capability: str, value: Any) -> bool:
         return await self.devices.set_capability_value(device_id, capability, value)
 
+    # ================== REGULAR FLOWS ==================
     async def get_flows(self) -> Dict[str, Any]:
         return await self.flows.get_flows()
 
+    async def get_flow(self, flow_id: str) -> Dict[str, Any]:
+        return await self.flows.get_flow(flow_id)
+
     async def trigger_flow(self, flow_id: str) -> bool:
         return await self.flows.trigger_flow(flow_id)
+
+    async def create_flow(self, flow_data: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.flows.create_flow(flow_data)
+
+    async def update_flow(self, flow_id: str, **kwargs) -> Dict[str, Any]:
+        return await self.flows.update_flow(flow_id, **kwargs)
+
+    async def delete_flow(self, flow_id: str) -> bool:
+        return await self.flows.delete_flow(flow_id)
+
+    async def test_flow(self, flow_data: Dict[str, Any], tokens: Dict[str, Any] = None) -> Dict[str, Any]:
+        return await self.flows.test_flow(flow_data, tokens)
+
+    # ================== ADVANCED FLOWS ==================
+    async def get_advanced_flows(self) -> Dict[str, Any]:
+        return await self.flows.get_advanced_flows()
+
+    async def get_advanced_flow(self, flow_id: str) -> Dict[str, Any]:
+        return await self.flows.get_advanced_flow(flow_id)
+
+    async def trigger_advanced_flow(self, flow_id: str) -> bool:
+        return await self.flows.trigger_advanced_flow(flow_id)
+
+    async def create_advanced_flow(self, flow_data: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.flows.create_advanced_flow(flow_data)
+
+    async def update_advanced_flow(self, flow_id: str, flow_data: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.flows.update_advanced_flow(flow_id, flow_data)
+
+    async def delete_advanced_flow(self, flow_id: str) -> bool:
+        return await self.flows.delete_advanced_flow(flow_id)
+
+    # ================== FLOW FOLDERS ==================
+    async def get_flow_folders(self) -> Dict[str, Any]:
+        return await self.flows.get_flow_folders()
+
+    async def get_flow_folder(self, folder_id: str) -> Dict[str, Any]:
+        return await self.flows.get_flow_folder(folder_id)
+
+    async def create_flow_folder(self, name: str, parent: str = None) -> Dict[str, Any]:
+        return await self.flows.create_flow_folder(name, parent)
+
+    # ================== FLOW CARDS ==================
+    async def get_flow_card_triggers(self) -> Dict[str, Any]:
+        return await self.flows.get_flow_card_triggers()
+
+    async def get_flow_card_conditions(self) -> Dict[str, Any]:
+        return await self.flows.get_flow_card_conditions()
+
+    async def get_flow_card_actions(self) -> Dict[str, Any]:
+        return await self.flows.get_flow_card_actions()
+
+    # ================== FLOW UTILITIES ==================
+    async def get_flow_state(self) -> Dict[str, Any]:
+        return await self.flows.get_flow_state()
+
+    async def run_flow_card_action(self, uri: str, action_id: str, args: Dict[str, Any] = None, 
+                                  tokens: Dict[str, Any] = None) -> Dict[str, Any]:
+        return await self.flows.run_flow_card_action(uri, action_id, args, tokens)
 
     async def get_insights_logs(self) -> Dict[str, Any]:
         return await self.insights.get_insights_logs()
@@ -154,6 +261,13 @@ class HomeyAPIClient:
     async def get_energy_currency(self) -> Dict[str, Any]:
         return await self.energy.get_energy_currency()
 
+    # Zones delegate methods  
+    async def get_zones(self) -> Dict[str, Any]:
+        return await self.devices.get_zones()
+
+    async def get_zone(self, zone_id: str) -> Dict[str, Any]:
+        return await self.zones.get_zone(zone_id)
+
     async def test_endpoints(self) -> Dict[str, bool]:
         """Test different endpoint variants."""
         if self.config.offline_mode or self.config.demo_mode:
@@ -166,7 +280,8 @@ class HomeyAPIClient:
             "/api/manager/devices/device/", 
             "/api/manager/flow/flow",
             "/api/manager/flow/flow/",
-            "/api/manager/geolocation/",
+            "/api/manager/zones/zone/",  # CORRECT endpoint for Local API v3
+            "/api/manager/zones/state",
             "/api/manager/cloud/state/",
             "/api/manager/insights/log",
             "/api/manager/insights/log/", 

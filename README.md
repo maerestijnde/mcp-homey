@@ -81,8 +81,8 @@ The Homey MCP Server enables Claude AI to interact directly with your Homey Pro 
          "command": "/Users/yourname/.local/bin/uv",
          "args": ["run", "--directory", "/Users/yourname/Projects/mcp-homey", "python", "src/homey_mcp/__main__.py"],
          "env": {
-           "HOMEY_LOCAL_ADDRESS": "192.168.1.100",
-           "HOMEY_LOCAL_TOKEN": "abc123xyz789",
+           "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP_ADDRESS",
+           "HOMEY_LOCAL_TOKEN": "your-personal-access-token",
            "OFFLINE_MODE": "false",
            "DEMO_MODE": "false"
          }
@@ -125,8 +125,8 @@ The Homey MCP Server enables Claude AI to interact directly with your Homey Pro 
          "command": "C:\\Users\\yourname\\.local\\bin\\uv.exe",
          "args": ["run", "--directory", "C:\\Users\\yourname\\Projects\\mcp-homey", "python", "src/homey_mcp/__main__.py"],
          "env": {
-           "HOMEY_LOCAL_ADDRESS": "192.168.1.100",
-           "HOMEY_LOCAL_TOKEN": "abc123xyz789",
+           "HOMEY_LOCAL_ADDRESS": "YOUR_HOMEY_IP_ADDRESS",
+           "HOMEY_LOCAL_TOKEN": "your-personal-access-token",
            "OFFLINE_MODE": "false",
            "DEMO_MODE": "false"
          }
@@ -205,10 +205,13 @@ Switch modes by editing your Claude Desktop config and restarting Claude:
 ```
 *Offline but minimal demo data*
 
-## 🛠️ Available Tools (16 total)
+## 🛠️ Available Tools (17 total)
 
 ### 📱 Device Control (8 tools)
 `get_devices` • `control_device` • `get_device_status` • `find_devices_by_zone` • `control_lights_in_zone` • `set_thermostat_temperature` • `set_light_color` • `get_sensor_readings`
+
+### 🏠 Zone Management (1 tool)
+`get_zones`
 
 ### 🔄 Flow Management (3 tools)  
 `get_flows` • `trigger_flow` • `find_flow_by_name`
@@ -220,6 +223,7 @@ Switch modes by editing your Claude Desktop config and restarting Claude:
 
 ```
 "What devices do I have?"
+"What zones are available?"
 "Turn on the kitchen lights at 75%"
 "Set thermostat to 22 degrees"
 "Start the evening routine"

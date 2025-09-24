@@ -72,29 +72,61 @@ class LightingTools:
         ]
 
     async def handle_control_lights_in_zone(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for control_lights_in_zone tool."""
+        """Handler for control_lights_in_zone tool - FIXED WITH ZONE UUID SUPPORT."""
         try:
-            zone_name = arguments["zone_name"].lower()
+            zone_input = arguments["zone_name"]  # Can be name OR UUID
             action = arguments["action"]
             brightness = arguments.get("brightness")  # 0-100 percentage
             color_temperature = arguments.get("color_temperature")  # 0-100 percentage
 
             devices = await self.homey_client.get_devices()
+            
+            # Get all zones to support both name and UUID lookup
+            try:
+                zones = await self.homey_client.get_zones()
+            except:
+                zones = {}
 
-            # Find lights in the zone
+            # Determine if input is UUID or name
+            zone_uuid = None
+            zone_name = None
+            
+            if zone_input in zones:
+                # Input is UUID
+                zone_uuid = zone_input
+                zone_name = zones[zone_input].get("name", "")
+            else:
+                # Input is name - find matching zone
+                zone_input_lower = zone_input.lower()
+                for zid, zdata in zones.items():
+                    if zdata.get("name", "").lower() == zone_input_lower:
+                        zone_uuid = zid
+                        zone_name = zdata.get("name")
+                        break
+
+            # Find lights in the zone (improved filtering)
             lights = []
             for device_id, device in devices.items():
-                device_zone = device.get("zoneName", "").lower()
                 device_class = device.get("class")
-
-                if zone_name in device_zone and device_class == "light":
-                    lights.append((device_id, device))
+                
+                if device_class == "light":
+                    # Check zone match (UUID preferred, fallback to name)
+                    zone_match = False
+                    if zone_uuid and device.get("zone") == zone_uuid:
+                        zone_match = True
+                    elif zone_name and zone_name.lower() in device.get("zoneName", "").lower():
+                        zone_match = True
+                    elif zone_input.lower() in device.get("zoneName", "").lower():
+                        zone_match = True
+                    
+                    if zone_match:
+                        lights.append((device_id, device))
 
             if not lights:
                 return [
                     TextContent(
                         type="text",
-                        text=f"No lights found in zone '{arguments['zone_name']}'",
+                        text=f"No lights found in zone '{zone_input}'",
                     )
                 ]
 
@@ -147,7 +179,7 @@ class LightingTools:
             return [
                 TextContent(
                     type="text",
-                    text=f"Lights in '{arguments['zone_name']}' controlled:\n\n" + "\n".join(results),
+                    text=f"Lights in '{zone_input}' controlled:\n\n" + "\n".join(results),
                 )
             ]
 
