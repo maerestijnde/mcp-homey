@@ -7,16 +7,22 @@ import logging
 import sys
 from pathlib import Path
 
-# Setup logging first - redirect to file to avoid interfering with JSON-RPC stdio
+# Setup logging - use stderr for errors so Claude can see them, file for info
 log_file = Path(__file__).parent.parent.parent / "homey_mcp_server.log"
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file),
-        # Don't log to stderr/stdout as it interferes with JSON-RPC
+        # Add stderr handler for errors so Claude can see startup issues
+        logging.StreamHandler(sys.stderr)
     ]
 )
+
+# Set stderr handler to only show warnings and errors
+stderr_handler = logging.StreamHandler(sys.stderr)
+stderr_handler.setLevel(logging.WARNING)
+logging.getLogger().addHandler(stderr_handler)
 
 # Add src to path for development (this should be set by the shell script)
 src_path = Path(__file__).parent.parent

@@ -31,20 +31,50 @@ class SensorTools:
         ]
 
     async def handle_get_sensor_readings(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_sensor_readings tool."""
+        """Handler for get_sensor_readings tool - FIXED WITH ZONE UUID SUPPORT."""
         try:
-            zone_name = arguments["zone_name"].lower()
+            zone_input = arguments["zone_name"]  # Can be name OR UUID
             sensor_type = arguments.get("sensor_type", "all")
 
             devices = await self.homey_client.get_devices()
+            
+            # Get all zones to support both name and UUID lookup
+            try:
+                zones = await self.homey_client.get_zones()
+            except:
+                zones = {}
 
-            # Find sensors in the zone
+            # Determine if input is UUID or name
+            zone_uuid = None
+            zone_name = None
+            
+            if zone_input in zones:
+                # Input is UUID
+                zone_uuid = zone_input
+                zone_name = zones[zone_input].get("name", "")
+            else:
+                # Input is name - find matching zone
+                zone_input_lower = zone_input.lower()
+                for zid, zdata in zones.items():
+                    if zdata.get("name", "").lower() == zone_input_lower:
+                        zone_uuid = zid
+                        zone_name = zdata.get("name")
+                        break
+
+            # Find sensors in the zone (improved filtering)
             sensors = []
             for device_id, device in devices.items():
-                device_zone = device.get("zoneName", "").lower()
-                capabilities = device.get("capabilitiesObj", {})
+                # Check zone match (UUID preferred, fallback to name)
+                zone_match = False
+                if zone_uuid and device.get("zone") == zone_uuid:
+                    zone_match = True
+                elif zone_name and zone_name.lower() in device.get("zoneName", "").lower():
+                    zone_match = True
+                elif zone_input.lower() in device.get("zoneName", "").lower():
+                    zone_match = True
 
-                if zone_name in device_zone:
+                if zone_match:
+                    capabilities = device.get("capabilitiesObj", {})
                     # Check if device has sensor capabilities
                     sensor_caps = {}
                     for cap_name, cap_data in capabilities.items():
@@ -63,11 +93,11 @@ class SensorTools:
             if not sensors:
                 return [TextContent(
                     type="text",
-                    text=f"No sensors found in zone '{arguments['zone_name']}'"
+                    text=f"No sensors found in zone '{zone_input}'"
                 )]
 
             # Format sensor data
-            result_lines = [f"Sensor readings in '{arguments['zone_name']}':"]
+            result_lines = [f"Sensor readings in '{zone_input}':"]
             
             for sensor in sensors:
                 result_lines.append(f"\n📊 {sensor['name']} ({sensor['class']}):")
