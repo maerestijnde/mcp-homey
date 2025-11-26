@@ -92,3 +92,8 @@ docs/_build/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+#claude
+.claude/
+.claude.md
+claude.md

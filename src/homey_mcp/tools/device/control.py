@@ -6,7 +6,6 @@ from mcp.types import TextContent, Tool
 
 from ...client import HomeyAPIClient
 from .lighting import LightingTools
-from .climate import ClimateTools
 from .sensors import SensorTools
 
 
@@ -17,7 +16,6 @@ class DeviceControlTools:
     def __init__(self, homey_client: HomeyAPIClient):
         self.homey_client = homey_client
         self.lighting = LightingTools(homey_client)
-        self.climate = ClimateTools(homey_client)
         self.sensors = SensorTools(homey_client)
 
     def get_tools(self) -> List[Tool]:
@@ -98,7 +96,6 @@ class DeviceControlTools:
         
         # Add specialized tools
         tools.extend(self.lighting.get_tools())
-        tools.extend(self.climate.get_tools())
         tools.extend(self.sensors.get_tools())
         
         return tools

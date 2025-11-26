@@ -13,214 +13,41 @@ class FlowManagementTools:
     def get_tools(self) -> List[Tool]:
         """Return all flow management tools."""
         return [
-            # ================== BASIC FLOW OPERATIONS ==================
+            # ================== FLOW OPERATIONS ==================
             Tool(
                 name="get_flows",
-                description="Get all Homey flows (automation)",
-                inputSchema={"type": "object", "properties": {}, "required": []},
-            ),
-            Tool(
-                name="get_flow",
-                description="Get specific flow by ID",
+                description="Get all Homey flows. Can retrieve basic flows, advanced flows, or both.",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "flow_id": {"type": "string", "description": "The flow ID"}
+                        "flow_type": {"type": "string", "enum": ["basic", "advanced", "all"], "default": "all", "description": "Type of flows to retrieve"}
+                    },
+                    "required": []
+                },
+            ),
+            Tool(
+                name="get_flow",
+                description="Get specific flow by ID. Works for both basic and advanced flows.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "flow_id": {"type": "string", "description": "The flow ID"},
+                        "flow_type": {"type": "string", "enum": ["basic", "advanced", "auto"], "default": "auto", "description": "Type of flow (auto-detect if not specified)"}
                     },
                     "required": ["flow_id"],
                 },
             ),
             Tool(
                 name="trigger_flow",
-                description="Start a specific Homey flow",
+                description="Trigger a Homey flow. Works for both basic and advanced flows.",
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "flow_id": {"type": "string", "description": "The ID of the flow to start"}
+                        "flow_id": {"type": "string", "description": "The ID of the flow to trigger"},
+                        "flow_type": {"type": "string", "enum": ["basic", "advanced", "auto"], "default": "auto", "description": "Type of flow (auto-detect if not specified)"}
                     },
                     "required": ["flow_id"],
                 },
-            ),
-            Tool(
-                name="create_flow",
-                description="Create a new flow",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string", "description": "Flow name"},
-                        "trigger": {"type": "object", "description": "Flow trigger configuration"},
-                        "actions": {"type": "array", "items": {"type": "object"}, "description": "Flow actions"},
-                        "conditions": {"type": "array", "items": {"type": "object"}, "description": "Flow conditions (optional)"},
-                        "folder": {"type": "string", "description": "Flow folder ID (optional)"},
-                        "enabled": {"type": "boolean", "default": True, "description": "Enable flow"}
-                    },
-                    "required": ["name", "trigger", "actions"],
-                },
-            ),
-            Tool(
-                name="update_flow",
-                description="Update flow properties (enable/disable, rename, etc.)",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "flow_id": {"type": "string", "description": "The flow ID"},
-                        "enabled": {"type": "boolean", "description": "Enable/disable flow"},
-                        "name": {"type": "string", "description": "New flow name"},
-                        "folder": {"type": "string", "description": "New folder ID"},
-                    },
-                    "required": ["flow_id"],
-                },
-            ),
-            Tool(
-                name="delete_flow",
-                description="Delete a flow",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "flow_id": {"type": "string", "description": "The flow ID"}
-                    },
-                    "required": ["flow_id"],
-                },
-            ),
-            Tool(
-                name="test_flow",
-                description="Test a flow before saving/triggering",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "flow_data": {"type": "object", "description": "Flow configuration to test"},
-                        "tokens": {"type": "object", "description": "Test tokens (optional)"}
-                    },
-                    "required": ["flow_data"],
-                },
-            ),
-
-            # ================== ADVANCED FLOW OPERATIONS ==================
-            Tool(
-                name="get_advanced_flows",
-                description="Get all advanced flows (complex automations)",
-                inputSchema={"type": "object", "properties": {}, "required": []},
-            ),
-            Tool(
-                name="get_advanced_flow",
-                description="Get specific advanced flow by ID",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "flow_id": {"type": "string", "description": "The advanced flow ID"}
-                    },
-                    "required": ["flow_id"],
-                },
-            ),
-            Tool(
-                name="trigger_advanced_flow",
-                description="Trigger an advanced flow",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "flow_id": {"type": "string", "description": "The advanced flow ID"}
-                    },
-                    "required": ["flow_id"],
-                },
-            ),
-            Tool(
-                name="create_advanced_flow",
-                description="Create a new advanced flow with proper card structure including positions and connections. Supports all card types: trigger, condition, action, delay (wait), any (OR gate), all (AND gate), note (documentation). Advanced features: inverted conditions, outputError for error handling, input arrays for ALL cards.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string", "description": "Flow name"},
-                        "cards": {
-                            "oneOf": [
-                                {
-                                    "type": "object",
-                                    "description": "Flow cards as object with unique IDs as keys"
-                                },
-                                {
-                                    "type": "array",
-                                    "description": "Flow cards as array (will be converted to object automatically)",
-                                    "items": {"type": "object"}
-                                }
-                            ],
-                            "description": "Flow cards. Can be either an object with card IDs as keys, or an array of cards (which will be automatically converted). Each card must have: type, and for non-builtin cards: id, ownerUri. Position (x, y) will be auto-generated if missing.",
-                            "additionalProperties": {
-                                "type": "object",
-                                "properties": {
-                                    "ownerUri": {"type": "string", "description": "Owner URI (e.g., homey:device:uuid) - not required for delay cards"},
-                                    "id": {"type": "string", "description": "Card capability ID - not required for delay cards"},
-                                    "type": {"type": "string", "enum": ["trigger", "condition", "action", "delay", "any", "all", "note", "start"], "description": "Card type"},
-                                    "x": {"type": "number", "description": "X coordinate in flow editor"},
-                                    "y": {"type": "number", "description": "Y coordinate in flow editor"},
-                                    "args": {"type": "object", "description": "Card arguments/parameters"},
-                                    "outputSuccess": {"type": "array", "items": {"type": "string"}, "description": "Card IDs to connect on success"},
-                                    "outputTrue": {"type": "array", "items": {"type": "string"}, "description": "Card IDs to connect on true condition"},
-                                    "outputFalse": {"type": "array", "items": {"type": "string"}, "description": "Card IDs to connect on false condition"},
-                                    "outputError": {"type": "array", "items": {"type": "string"}, "description": "Card IDs to connect on error"},
-                                    "droptoken": {"type": "string", "description": "Droptoken for conditions"},
-                                    "inverted": {"type": "boolean", "description": "Invert condition logic (NOT)"},
-                                    "input": {"type": "array", "items": {"type": "string"}, "description": "Input card references for ALL cards (format: card-id::outputType)"},
-                                    "value": {"type": "string", "description": "Text content for NOTE cards"},
-                                    "color": {"type": "string", "description": "Color for NOTE cards"},
-                                    "width": {"type": "number", "description": "Width for NOTE cards"},
-                                    "height": {"type": "number", "description": "Height for NOTE cards"}
-                                },
-                                "required": ["type", "x", "y"]
-                            }
-                        },
-                        "enabled": {"type": "boolean", "default": True, "description": "Enable flow"},
-                        "folder": {"type": "string", "description": "Flow folder ID (optional)"},
-                        "triggerable": {"type": "boolean", "default": False, "description": "Whether flow can be triggered manually"},
-                        "broken": {"type": "boolean", "default": False, "description": "Whether flow is broken"}
-                    },
-                    "required": ["name", "cards"],
-                },
-            ),
-            Tool(
-                name="create_advanced_flow_with_validation",
-                description="Create advanced flow with full device capability validation. First loads all available triggers, conditions and actions from devices to ensure flow is valid before creation.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string", "description": "Flow name"},
-                        "cards": {
-                            "type": "object",
-                            "description": "Flow cards - will be validated against actual device capabilities"
-                        },
-                        "enabled": {"type": "boolean", "default": True, "description": "Enable flow"},
-                        "folder": {"type": "string", "description": "Flow folder ID (optional)"},
-                        "triggerable": {"type": "boolean", "default": False, "description": "Whether flow can be triggered manually"},
-                        "validate_devices": {"type": "boolean", "default": True, "description": "Validate device capabilities before creation"},
-                        "auto_fix_positions": {"type": "boolean", "default": True, "description": "Automatically fix card positioning"}
-                    },
-                    "required": ["name", "cards"]
-                }
-            ),
-            Tool(
-                name="update_advanced_flow",
-                description="Update an existing advanced flow",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "flow_id": {"type": "string", "description": "The advanced flow ID to update"},
-                        "name": {"type": "string", "description": "New flow name"},
-                        "enabled": {"type": "boolean", "description": "Enable/disable flow"},
-                        "folder": {"type": "string", "description": "Flow folder ID"},
-                        "cards": {"type": "object", "description": "Updated flow cards configuration"},
-                        "triggerable": {"type": "boolean", "description": "Whether flow can be triggered manually"}
-                    },
-                    "required": ["flow_id"]
-                }
-            ),
-            Tool(
-                name="delete_advanced_flow",
-                description="Delete an advanced flow",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "flow_id": {"type": "string", "description": "The advanced flow ID to delete"}
-                    },
-                    "required": ["flow_id"]
-                }
             ),
             Tool(
                 name="get_device_flow_capabilities",
@@ -241,55 +68,27 @@ class FlowManagementTools:
                 description="Get all flow folders for organization",
                 inputSchema={"type": "object", "properties": {}, "required": []},
             ),
-            Tool(
-                name="get_flow_folder",
-                description="Get a specific flow folder by ID",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "folder_id": {"type": "string", "description": "The folder ID"}
-                    },
-                    "required": ["folder_id"]
-                }
-            ),
-            Tool(
-                name="create_flow_folder",
-                description="Create a new flow folder for organization",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string", "description": "Folder name"},
-                        "parent": {"type": "string", "description": "Parent folder ID (optional)"}
-                    },
-                    "required": ["name"],
-                },
-            ),
 
             # ================== FLOW CARD OPERATIONS ==================
             Tool(
-                name="get_flow_card_triggers",
-                description="Get available flow triggers for building flows",
-                inputSchema={"type": "object", "properties": {}, "required": []},
-            ),
-            Tool(
-                name="get_flow_card_conditions",
-                description="Get available flow conditions for building flows",
-                inputSchema={"type": "object", "properties": {}, "required": []},
-            ),
-            Tool(
-                name="get_flow_card_actions",
-                description="Get available flow actions for building flows",
-                inputSchema={"type": "object", "properties": {}, "required": []},
+                name="get_flow_cards",
+                description="Get available flow cards (triggers, conditions, or actions) for building flows. Supports pagination and filtering to avoid token limits.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "card_type": {"type": "string", "enum": ["trigger", "condition", "action", "all"], "default": "all", "description": "Type of flow cards to retrieve"},
+                        "limit": {"type": "integer", "description": "Maximum number of results to return (default: 50, max: 200)", "default": 50},
+                        "offset": {"type": "integer", "description": "Number of results to skip (for pagination)", "default": 0},
+                        "summary_mode": {"type": "boolean", "description": "Return only essential fields (id, uri, title) to save tokens", "default": False},
+                        "filter_uri": {"type": "string", "description": "Filter by URI pattern (e.g., 'homey:device:', 'homey:manager:')"}
+                    },
+                    "required": []
+                },
             ),
 
             # ================== FLOW BUILDER HELPERS ==================
 
-            # ================== FLOW STATE & TESTING ==================
-            Tool(
-                name="get_flow_state",
-                description="Get overall flow manager statistics",
-                inputSchema={"type": "object", "properties": {}, "required": []},
-            ),
+            # ================== FLOW TESTING ==================
             Tool(
                 name="run_flow_card_action",
                 description="Test run a specific flow action",
@@ -305,29 +104,64 @@ class FlowManagementTools:
             ),
         ]
 
-    # ================== BASIC FLOW HANDLERS ==================
+    # ================== UNIFIED FLOW HANDLERS ==================
 
     async def handle_get_flows(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_flows tool."""
+        """Unified handler for get_flows tool - supports basic, advanced, or both."""
         try:
-            flows = await self.homey_client.get_flows()
+            flow_type = arguments.get("flow_type", "all")
 
-            flow_list = []
-            for flow_id, flow in flows.items():
-                flow_info = {
-                    "id": flow_id,
-                    "name": flow.get("name"),
-                    "enabled": flow.get("enabled", True),
-                    "broken": flow.get("broken", False),
-                    "folder": flow.get("folder"),
-                }
-                flow_list.append(flow_info)
+            all_flows = []
+
+            # Fetch basic flows if requested
+            if flow_type in ["basic", "all"]:
+                try:
+                    basic_flows = await self.homey_client.get_flows()
+                    for flow_id, flow in basic_flows.items():
+                        flow_info = {
+                            "id": flow_id,
+                            "name": flow.get("name"),
+                            "type": "basic",
+                            "enabled": flow.get("enabled", True),
+                            "broken": flow.get("broken", False),
+                            "folder": flow.get("folder"),
+                        }
+                        all_flows.append(flow_info)
+                except Exception as e:
+                    if flow_type == "basic":
+                        raise
+                    # If fetching all, continue even if basic flows fail
+                    pass
+
+            # Fetch advanced flows if requested
+            if flow_type in ["advanced", "all"]:
+                try:
+                    advanced_flows = await self.homey_client.get_advanced_flows()
+                    for flow_id, flow in advanced_flows.items():
+                        flow_info = {
+                            "id": flow_id,
+                            "name": flow.get("name"),
+                            "type": "advanced",
+                            "enabled": flow.get("enabled", True),
+                            "broken": flow.get("broken", False),
+                            "folder": flow.get("folder"),
+                            "cards_count": len(flow.get("cards", {}))
+                        }
+                        all_flows.append(flow_info)
+                except Exception as e:
+                    if flow_type == "advanced":
+                        raise
+                    # If fetching all, continue even if advanced flows fail
+                    pass
+
+            flow_type_label = {"basic": "basic", "advanced": "advanced", "all": ""}[flow_type]
+            type_text = f"{flow_type_label} " if flow_type_label else ""
 
             return [
                 TextContent(
                     type="text",
-                    text=f"Found {len(flow_list)} flows:\n\n"
-                    + json.dumps(flow_list, indent=2, ensure_ascii=False),
+                    text=f"Found {len(all_flows)} {type_text}flows:\n\n"
+                    + json.dumps(all_flows, indent=2, ensure_ascii=False),
                 )
             ]
 
@@ -335,15 +169,36 @@ class FlowManagementTools:
             return [TextContent(type="text", text=f"❌ Error getting flows: {str(e)}")]
 
     async def handle_get_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_flow tool."""
+        """Unified handler for get_flow tool - supports basic, advanced, and auto-detection."""
         try:
             flow_id = arguments["flow_id"]
-            flow = await self.homey_client.get_flow(flow_id)
+            flow_type = arguments.get("flow_type", "auto")
+
+            flow = None
+            actual_type = None
+
+            if flow_type == "auto":
+                # Try basic first, then advanced
+                try:
+                    flow = await self.homey_client.get_flow(flow_id)
+                    actual_type = "basic"
+                except:
+                    try:
+                        flow = await self.homey_client.get_advanced_flow(flow_id)
+                        actual_type = "advanced"
+                    except:
+                        return [TextContent(type="text", text=f"❌ Flow {flow_id} not found in basic or advanced flows")]
+            elif flow_type == "basic":
+                flow = await self.homey_client.get_flow(flow_id)
+                actual_type = "basic"
+            elif flow_type == "advanced":
+                flow = await self.homey_client.get_advanced_flow(flow_id)
+                actual_type = "advanced"
 
             return [
                 TextContent(
                     type="text",
-                    text=f"Flow '{flow.get('name')}':\n\n"
+                    text=f"{actual_type.title()} Flow '{flow.get('name')}':\n\n"
                     + json.dumps(flow, indent=2, ensure_ascii=False),
                 )
             ]
@@ -354,447 +209,56 @@ class FlowManagementTools:
             return [TextContent(type="text", text=f"❌ Error getting flow: {str(e)}")]
 
     async def handle_trigger_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for trigger_flow tool."""
+        """Unified handler for trigger_flow tool - supports basic, advanced, and auto-detection."""
         try:
             flow_id = arguments["flow_id"]
+            flow_type = arguments.get("flow_type", "auto")
 
-            # Get flow info for name
-            try:
-                flow = await self.homey_client.get_flow(flow_id)
-                flow_name = flow.get("name", flow_id)
-            except:
-                flow_name = flow_id
+            flow_name = flow_id
+            actual_type = None
+            success = False
 
-            # Trigger the flow
-            success = await self.homey_client.trigger_flow(flow_id)
-
-            if success:
-                return [TextContent(type="text", text=f"✅ Flow '{flow_name}' started successfully")]
-            else:
-                return [TextContent(type="text", text=f"❌ Could not start flow '{flow_name}'")]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error starting flow: {str(e)}")]
-
-    async def handle_create_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for create_flow tool."""
-        try:
-            flow_data = {
-                "name": arguments["name"],
-                "trigger": arguments["trigger"],
-                "actions": arguments["actions"],
-                "conditions": arguments.get("conditions", []),
-                "folder": arguments.get("folder"),
-                "enabled": arguments.get("enabled", True)
-            }
-
-            new_flow = await self.homey_client.create_flow(flow_data)
-            
-            return [TextContent(
-                type="text", 
-                text=f"✅ Flow '{new_flow.get('name')}' created successfully (ID: {new_flow.get('id')})"
-            )]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error creating flow: {str(e)}")]
-
-    async def handle_update_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for update_flow tool."""
-        try:
-            flow_id = arguments["flow_id"]
-            
-            # Extract update parameters
-            update_params = {}
-            if "enabled" in arguments:
-                update_params["enabled"] = arguments["enabled"]
-            if "name" in arguments:
-                update_params["name"] = arguments["name"]
-            if "folder" in arguments:
-                update_params["folder"] = arguments["folder"]
-
-            updated_flow = await self.homey_client.update_flow(flow_id, **update_params)
-            
-            return [TextContent(
-                type="text",
-                text=f"✅ Flow '{updated_flow.get('name')}' updated successfully"
-            )]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error updating flow: {str(e)}")]
-
-    async def handle_delete_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for delete_flow tool."""
-        try:
-            flow_id = arguments["flow_id"]
-            
-            # Get flow name before deletion
-            try:
-                flow = await self.homey_client.get_flow(flow_id)
-                flow_name = flow.get("name", flow_id)
-            except:
-                flow_name = flow_id
-
-            success = await self.homey_client.delete_flow(flow_id)
-            
-            if success:
-                return [TextContent(type="text", text=f"✅ Flow '{flow_name}' deleted successfully")]
-            else:
-                return [TextContent(type="text", text=f"❌ Could not delete flow '{flow_name}'")]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error deleting flow: {str(e)}")]
-
-    async def handle_test_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for test_flow tool."""
-        try:
-            flow_data = arguments["flow_data"]
-            tokens = arguments.get("tokens", {})
-
-            result = await self.homey_client.test_flow(flow_data, tokens)
-            
-            response_text = f"🧪 **Flow Test Results**\n\n"
-            response_text += f"• Success: {'✅' if result.get('success') else '❌'}\n"
-            
-            if "duration" in result:
-                response_text += f"• Duration: {result['duration']:.2f}s\n"
-            
-            if result.get("results"):
-                response_text += f"• Results: {', '.join(result['results'])}\n"
-            
-            if result.get("errors"):
-                response_text += f"• Errors: {', '.join(result['errors'])}\n"
-            
-            if result.get("warnings"):
-                response_text += f"• Warnings: {', '.join(result['warnings'])}\n"
-
-            return [TextContent(type="text", text=response_text)]
-
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error testing flow: {str(e)}")]
-
-
-    # ================== ADVANCED FLOW HANDLERS ==================
-
-    async def handle_get_advanced_flows(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_advanced_flows tool."""
-        try:
-            flows = await self.homey_client.get_advanced_flows()
-
-            flow_list = []
-            for flow_id, flow in flows.items():
-                flow_info = {
-                    "id": flow_id,
-                    "name": flow.get("name"),
-                    "enabled": flow.get("enabled", True),
-                    "broken": flow.get("broken", False),
-                    "folder": flow.get("folder"),
-                    "cards_count": len(flow.get("cards", {}))
-                }
-                flow_list.append(flow_info)
-
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Found {len(flow_list)} advanced flows:\n\n"
-                    + json.dumps(flow_list, indent=2, ensure_ascii=False),
-                )
-            ]
-
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting advanced flows: {str(e)}")]
-
-    async def handle_get_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_advanced_flow tool."""
-        try:
-            flow_id = arguments["flow_id"]
-            flow = await self.homey_client.get_advanced_flow(flow_id)
-
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Advanced Flow '{flow.get('name')}':\n\n"
-                    + json.dumps(flow, indent=2, ensure_ascii=False),
-                )
-            ]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting advanced flow: {str(e)}")]
-
-    async def handle_trigger_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for trigger_advanced_flow tool."""
-        try:
-            flow_id = arguments["flow_id"]
-
-            # Get flow info for name
-            try:
-                flow = await self.homey_client.get_advanced_flow(flow_id)
-                flow_name = flow.get("name", flow_id)
-            except:
-                flow_name = flow_id
-
-            success = await self.homey_client.trigger_advanced_flow(flow_id)
-            
-            if success:
-                return [TextContent(type="text", text=f"✅ Advanced flow '{flow_name}' triggered successfully")]
-            else:
-                return [TextContent(type="text", text=f"❌ Could not trigger advanced flow '{flow_name}'")]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error triggering advanced flow: {str(e)}")]
-
-    async def handle_create_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for create_advanced_flow tool."""
-        try:
-            flow_data = {
-                "name": arguments["name"],
-                "cards": arguments["cards"],  # Now expects object structure
-                "enabled": arguments.get("enabled", True),
-                "folder": arguments.get("folder"),
-                "triggerable": arguments.get("triggerable", False),
-                "broken": arguments.get("broken", False)
-            }
-
-            new_flow = await self.homey_client.create_advanced_flow(flow_data)
-
-            card_count = len(flow_data["cards"]) if isinstance(flow_data["cards"], dict) else 0
-
-            return [TextContent(
-                type="text",
-                text=f"✅ Advanced flow '{new_flow.get('name')}' created successfully (ID: {new_flow.get('id')}) with {card_count} cards"
-            )]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error creating advanced flow: {str(e)}")]
-
-    async def handle_create_advanced_flow_with_validation(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for create_advanced_flow_with_validation tool."""
-        try:
-            name = arguments["name"]
-            cards = arguments["cards"]
-            enabled = arguments.get("enabled", True)
-            folder = arguments.get("folder")
-            triggerable = arguments.get("triggerable", False)
-            validate_devices = arguments.get("validate_devices", True)
-            auto_fix_positions = arguments.get("auto_fix_positions", True)
-
-            response_text = f"🔄 **Creating Advanced Flow: '{name}'**\n\n"
-
-            # Step 1: Pre-load all device capabilities if validation enabled
-            if validate_devices:
-                response_text += "**Step 1: Loading device capabilities...**\n"
+            if flow_type == "auto":
+                # Try basic first, then advanced
                 try:
-                    # Load all devices first
-                    devices = await self.homey_client.get_devices()
-                    response_text += f"✅ Loaded {len(devices)} devices\n"
-
-                    # Load all available flow cards
-                    triggers = await self.homey_client.get_flow_card_triggers()
-                    conditions = await self.homey_client.get_flow_card_conditions()
-                    actions = await self.homey_client.get_flow_card_actions()
-
-                    response_text += f"✅ Loaded {len(triggers)} triggers\n"
-                    response_text += f"✅ Loaded {len(conditions)} conditions\n"
-                    response_text += f"✅ Loaded {len(actions)} actions\n\n"
-
-                except Exception as e:
-                    return [TextContent(type="text", text=f"❌ Error loading capabilities: {str(e)}")]
-
-            # Step 2: Validate each card against available capabilities
-            if validate_devices:
-                response_text += "**Step 2: Validating flow cards...**\n"
-                validation_errors = []
-                validation_warnings = []
-
-                for card_id, card in cards.items():
-                    card_type = card.get("type", "unknown")
-                    owner_uri = card.get("ownerUri", "")
-                    capability_id = card.get("id", "")
-
-                    # Skip builtin cards
-                    if card_type in ["delay", "any", "all", "note"]:
-                        response_text += f"✅ {card_id}: Builtin card '{card_type}'\n"
-                        continue
-
-                    # Check if device exists
-                    if owner_uri.startswith("homey:device:"):
-                        device_id = owner_uri.split(":")[-1]
-                        if device_id not in devices:
-                            validation_errors.append(f"Device {device_id} not found for card {card_id}")
-                            continue
-
-                        device_name = devices[device_id].get("name", device_id)
-                        response_text += f"✅ {card_id}: Device '{device_name}' found\n"
-
-                    # Validate capability exists
-                    capability_found = False
-                    if card_type == "trigger":
-                        capability_found = any(t.get("id") == capability_id for t in triggers)
-                    elif card_type == "condition":
-                        capability_found = any(c.get("id") == capability_id for c in conditions)
-                    elif card_type == "action":
-                        capability_found = any(a.get("id") == capability_id for a in actions)
-
-                    if not capability_found:
-                        validation_warnings.append(f"Capability '{capability_id}' not found in available {card_type}s for card {card_id}")
-
-                if validation_errors:
-                    response_text += f"\n❌ **Validation Errors:**\n"
-                    for error in validation_errors:
-                        response_text += f"• {error}\n"
-                    return [TextContent(type="text", text=response_text)]
-
-                if validation_warnings:
-                    response_text += f"\n⚠️ **Validation Warnings:**\n"
-                    for warning in validation_warnings:
-                        response_text += f"• {warning}\n"
-
-                response_text += "\n"
-
-            # Step 3: Auto-fix positions if enabled
-            if auto_fix_positions:
-                response_text += "**Step 3: Optimizing card positions...**\n"
-                cards = self._optimize_card_positions(cards)
-                response_text += "✅ Card positions optimized\n\n"
-
-            # Step 4: Create the flow
-            response_text += "**Step 4: Creating advanced flow...**\n"
-            flow_data = {
-                "name": name,
-                "cards": cards,
-                "enabled": enabled,
-                "folder": folder,
-                "triggerable": triggerable
-            }
-
-            new_flow = await self.homey_client.create_advanced_flow(flow_data)
-            card_count = len(cards) if isinstance(cards, dict) else 0
-
-            response_text += f"✅ **Advanced flow '{new_flow.get('name')}' created successfully!**\n"
-            response_text += f"• Flow ID: {new_flow.get('id')}\n"
-            response_text += f"• Cards: {card_count}\n"
-            response_text += f"• Enabled: {'Yes' if enabled else 'No'}\n"
-
-            return [TextContent(type="text", text=response_text)]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error creating validated advanced flow: {str(e)}")]
-
-    async def handle_update_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for update_advanced_flow tool."""
-        try:
-            flow_id = arguments["flow_id"]
-
-            # Build update data from provided arguments
-            update_data = {}
-            if "name" in arguments:
-                update_data["name"] = arguments["name"]
-            if "enabled" in arguments:
-                update_data["enabled"] = arguments["enabled"]
-            if "folder" in arguments:
-                update_data["folder"] = arguments["folder"]
-            if "cards" in arguments:
-                update_data["cards"] = arguments["cards"]
-            if "triggerable" in arguments:
-                update_data["triggerable"] = arguments["triggerable"]
-
-            updated_flow = await self.homey_client.update_advanced_flow(flow_id, update_data)
-
-            return [TextContent(
-                type="text",
-                text=f"✅ Advanced flow '{updated_flow.get('name')}' updated successfully"
-            )]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error updating advanced flow: {str(e)}")]
-
-    async def handle_delete_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for delete_advanced_flow tool."""
-        try:
-            flow_id = arguments["flow_id"]
-
-            # Get flow name before deletion
-            try:
-                flow = await self.homey_client.get_advanced_flow(flow_id)
-                flow_name = flow.get("name", flow_id)
-            except:
-                flow_name = flow_id
-
-            success = await self.homey_client.delete_advanced_flow(flow_id)
+                    flow = await self.homey_client.get_flow(flow_id)
+                    flow_name = flow.get("name", flow_id)
+                    success = await self.homey_client.trigger_flow(flow_id)
+                    actual_type = "basic"
+                except:
+                    try:
+                        flow = await self.homey_client.get_advanced_flow(flow_id)
+                        flow_name = flow.get("name", flow_id)
+                        success = await self.homey_client.trigger_advanced_flow(flow_id)
+                        actual_type = "advanced"
+                    except:
+                        return [TextContent(type="text", text=f"❌ Flow {flow_id} not found in basic or advanced flows")]
+            elif flow_type == "basic":
+                try:
+                    flow = await self.homey_client.get_flow(flow_id)
+                    flow_name = flow.get("name", flow_id)
+                except:
+                    pass
+                success = await self.homey_client.trigger_flow(flow_id)
+                actual_type = "basic"
+            elif flow_type == "advanced":
+                try:
+                    flow = await self.homey_client.get_advanced_flow(flow_id)
+                    flow_name = flow.get("name", flow_id)
+                except:
+                    pass
+                success = await self.homey_client.trigger_advanced_flow(flow_id)
+                actual_type = "advanced"
 
             if success:
-                return [TextContent(type="text", text=f"✅ Advanced flow '{flow_name}' deleted successfully")]
+                return [TextContent(type="text", text=f"✅ {actual_type.title()} flow '{flow_name}' triggered successfully")]
             else:
-                return [TextContent(type="text", text=f"❌ Could not delete advanced flow '{flow_name}'")]
+                return [TextContent(type="text", text=f"❌ Could not trigger {actual_type} flow '{flow_name}'")]
 
         except ValueError as e:
             return [TextContent(type="text", text=f"❌ {str(e)}")]
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error deleting advanced flow: {str(e)}")]
-
-    def _optimize_card_positions(self, cards: Dict[str, Any]) -> Dict[str, Any]:
-        """Optimize card positions for better flow layout."""
-        optimized_cards = cards.copy()
-
-        # Simple optimization: organize by type
-        triggers = []
-        conditions = []
-        actions = []
-        others = []
-
-        for card_id, card in cards.items():
-            card_type = card.get("type", "action")
-            if card_type == "trigger":
-                triggers.append((card_id, card))
-            elif card_type == "condition":
-                conditions.append((card_id, card))
-            elif card_type == "action":
-                actions.append((card_id, card))
-            else:
-                others.append((card_id, card))
-
-        # Layout: triggers left, conditions center, actions right
-        y_offset = 40
-        spacing = 100
-
-        # Position triggers
-        for i, (card_id, card) in enumerate(triggers):
-            optimized_cards[card_id]["x"] = 50
-            optimized_cards[card_id]["y"] = y_offset + (i * spacing)
-
-        # Position conditions
-        for i, (card_id, card) in enumerate(conditions):
-            optimized_cards[card_id]["x"] = 400
-            optimized_cards[card_id]["y"] = y_offset + (i * spacing)
-
-        # Position actions
-        for i, (card_id, card) in enumerate(actions):
-            optimized_cards[card_id]["x"] = 800
-            optimized_cards[card_id]["y"] = y_offset + (i * spacing)
-
-        # Position others
-        for i, (card_id, card) in enumerate(others):
-            optimized_cards[card_id]["x"] = 600
-            optimized_cards[card_id]["y"] = y_offset + (i * spacing)
-
-        return optimized_cards
+            return [TextContent(type="text", text=f"❌ Error triggering flow: {str(e)}")]
 
     async def handle_get_device_flow_capabilities(self, arguments: Dict[str, Any]) -> List[TextContent]:
         """Handler for get_device_flow_capabilities tool."""
@@ -945,169 +409,108 @@ class FlowManagementTools:
         except Exception as e:
             return [TextContent(type="text", text=f"❌ Error getting flow folders: {str(e)}")]
 
-    async def handle_get_flow_folder(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_flow_folder tool."""
-        try:
-            folder_id = arguments["folder_id"]
-            folder = await self.homey_client.get_flow_folder(folder_id)
-
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Flow folder '{folder.get('name')}':\n\n"
-                    + json.dumps(folder, indent=2, ensure_ascii=False),
-                )
-            ]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting flow folder: {str(e)}")]
-
-    async def handle_create_flow_folder(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for create_flow_folder tool."""
-        try:
-            name = arguments["name"]
-            parent = arguments.get("parent")
-
-            new_folder = await self.homey_client.create_flow_folder(name, parent)
-            
-            return [TextContent(
-                type="text", 
-                text=f"✅ Flow folder '{new_folder.get('name')}' created successfully (ID: {new_folder.get('id')})"
-            )]
-
-        except ValueError as e:
-            return [TextContent(type="text", text=f"❌ {str(e)}")]
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error creating flow folder: {str(e)}")]
-
     # ================== FLOW CARD HANDLERS ==================
 
-    async def handle_get_flow_card_triggers(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_flow_card_triggers tool."""
+    async def handle_get_flow_cards(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Unified handler for getting flow cards (triggers, conditions, or actions)."""
         try:
-            triggers = await self.homey_client.get_flow_card_triggers()
+            # Get parameters
+            card_type = arguments.get("card_type", "all")
+            limit = min(arguments.get("limit", 50), 200)  # Cap at 200 max
+            offset = arguments.get("offset", 0)
+            summary_mode = arguments.get("summary_mode", False)
+            filter_uri = arguments.get("filter_uri")
 
-            trigger_list = []
+            # Determine which card types to fetch
+            fetch_types = []
+            if card_type == "all":
+                fetch_types = ["trigger", "condition", "action"]
+            else:
+                fetch_types = [card_type]
 
-            # API returns a list of triggers
-            for trigger in triggers:
-                trigger_info = {
-                    "id": trigger.get("id", "unknown"),
-                    "uri": trigger.get("uri"),
-                    "title": trigger.get("title"),
-                    "titleFormatted": trigger.get("titleFormatted"),
-                    "args": trigger.get("args", [])
-                }
-                trigger_list.append(trigger_info)
+            all_cards = []
+            type_labels = {
+                "trigger": "Triggers",
+                "condition": "Conditions",
+                "action": "Actions"
+            }
 
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Found {len(trigger_list)} flow triggers:\n\n"
-                    + json.dumps(trigger_list, indent=2, ensure_ascii=False),
-                )
-            ]
+            # Fetch requested card types
+            for ftype in fetch_types:
+                if ftype == "trigger":
+                    cards = await self.homey_client.get_flow_card_triggers()
+                    card_label = "trigger"
+                elif ftype == "condition":
+                    cards = await self.homey_client.get_flow_card_conditions()
+                    card_label = "condition"
+                elif ftype == "action":
+                    cards = await self.homey_client.get_flow_card_actions()
+                    card_label = "action"
+                else:
+                    continue
+
+                # Add type label to each card for clarity when fetching all
+                for card in cards:
+                    card["_type"] = card_label
+                    all_cards.append(card)
+
+            # Apply URI filter if specified
+            if filter_uri:
+                all_cards = [c for c in all_cards if filter_uri in c.get("uri", "")]
+
+            total_count = len(all_cards)
+
+            # Apply pagination
+            all_cards = all_cards[offset:offset + limit]
+
+            card_list = []
+
+            # Format cards
+            for card in all_cards:
+                if summary_mode:
+                    # Return only essential fields
+                    card_info = {
+                        "id": card.get("id", "unknown"),
+                        "uri": card.get("uri"),
+                        "title": card.get("title"),
+                        "type": card.get("_type")
+                    }
+                else:
+                    # Return full information
+                    card_info = {
+                        "id": card.get("id", "unknown"),
+                        "uri": card.get("uri"),
+                        "title": card.get("title"),
+                        "type": card.get("_type"),
+                        "titleFormatted": card.get("titleFormatted"),
+                        "args": card.get("args", [])
+                    }
+                card_list.append(card_info)
+
+            # Build response with pagination info
+            type_display = type_labels.get(card_type, "All Flow Cards") if card_type != "all" else "All Flow Cards"
+            response_text = f"📋 **{type_display}** (showing {len(card_list)} of {total_count})\n"
+            if offset > 0:
+                response_text += f"• Offset: {offset}\n"
+            if offset + limit < total_count:
+                response_text += f"• More available: Use offset={offset + limit} to see next page\n"
+            if filter_uri:
+                response_text += f"• Filtered by URI: {filter_uri}\n"
+            response_text += "\n"
+
+            response_text += json.dumps(card_list, indent=2, ensure_ascii=False)
+
+            return [TextContent(type="text", text=response_text)]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting flow triggers: {str(e)}")]
-
-    async def handle_get_flow_card_conditions(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_flow_card_conditions tool."""
-        try:
-            conditions = await self.homey_client.get_flow_card_conditions()
-
-            condition_list = []
-
-            # API returns a list of conditions
-            for condition in conditions:
-                condition_info = {
-                    "id": condition.get("id", "unknown"),
-                    "uri": condition.get("uri"),
-                    "title": condition.get("title"),
-                    "titleFormatted": condition.get("titleFormatted"),
-                    "args": condition.get("args", [])
-                }
-                condition_list.append(condition_info)
-
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Found {len(condition_list)} flow conditions:\n\n"
-                    + json.dumps(condition_list, indent=2, ensure_ascii=False),
-                )
-            ]
-
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting flow conditions: {str(e)}")]
-
-    async def handle_get_flow_card_actions(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_flow_card_actions tool."""
-        try:
-            actions = await self.homey_client.get_flow_card_actions()
-
-            action_list = []
-
-            # API returns a list of actions
-            for action in actions:
-                action_info = {
-                    "id": action.get("id", "unknown"),
-                    "uri": action.get("uri"),
-                    "title": action.get("title"),
-                    "titleFormatted": action.get("titleFormatted"),
-                    "args": action.get("args", [])
-                }
-                action_list.append(action_info)
-
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Found {len(action_list)} flow actions:\n\n"
-                    + json.dumps(action_list, indent=2, ensure_ascii=False),
-                )
-            ]
-
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting flow actions: {str(e)}")]
+            return [TextContent(type="text", text=f"❌ Error getting flow cards: {str(e)}")]
 
     # ================== FLOW BUILDER HANDLERS ==================
 
 
 
 
-    # ================== FLOW STATE HANDLERS ==================
-
-    async def handle_get_flow_state(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_flow_state tool."""
-        try:
-            state = await self.homey_client.get_flow_state()
-
-            response_text = f"🔄 **Flow Manager State**\n\n"
-            response_text += f"• Status: {'✅ Enabled' if state.get('enabled') else '❌ Disabled'}\n"
-            
-            if "version" in state:
-                response_text += f"• Version: {state['version']}\n"
-            
-            if "total_flows" in state:
-                response_text += f"• Total Flows: {state['total_flows']}\n"
-            
-            if "enabled_flows" in state:
-                response_text += f"• Enabled Flows: {state['enabled_flows']}\n"
-            
-            if "broken_flows" in state:
-                response_text += f"• Broken Flows: {state['broken_flows']}\n"
-            
-            if "regular_flows" in state:
-                response_text += f"• Regular Flows: {state['regular_flows']}\n"
-            
-            if "advanced_flows" in state:
-                response_text += f"• Advanced Flows: {state['advanced_flows']}\n"
-
-            return [TextContent(type="text", text=response_text)]
-
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting flow state: {str(e)}")]
+    # ================== FLOW TESTING HANDLERS ==================
 
     async def handle_run_flow_card_action(self, arguments: Dict[str, Any]) -> List[TextContent]:
         """Handler for run_flow_card_action tool."""

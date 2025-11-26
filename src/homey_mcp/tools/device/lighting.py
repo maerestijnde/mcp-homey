@@ -31,42 +31,13 @@ class LightingTools:
                             "description": "Brightness percentage (1-100%). Only works with 'on' action.",
                         },
                         "color_temperature": {
-                            "type": "number", 
+                            "type": "number",
                             "minimum": 0,
                             "maximum": 100,
                             "description": "Optional: color temperature percentage (0=warm, 100=cold white)",
                         },
                     },
                     "required": ["zone_name", "action"],
-                },
-            ),
-            Tool(
-                name="set_light_color",
-                description="Set the color of a light",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "device_id": {"type": "string", "description": "The light device ID"},
-                        "hue": {
-                            "type": "number",
-                            "minimum": 0,
-                            "maximum": 360,
-                            "description": "Color in degrees (0=red, 120=green, 240=blue)"
-                        },
-                        "saturation": {
-                            "type": "number",
-                            "minimum": 0,
-                            "maximum": 100,
-                            "description": "Saturation percentage (0=white, 100=fully saturated)"
-                        },
-                        "brightness": {
-                            "type": "number",
-                            "minimum": 1,
-                            "maximum": 100,
-                            "description": "Optional: brightness percentage"
-                        },
-                    },
-                    "required": ["device_id", "hue", "saturation"],
                 },
             ),
         ]
@@ -185,59 +156,3 @@ class LightingTools:
 
         except Exception as e:
             return [TextContent(type="text", text=f"❌ Error controlling lights: {str(e)}")]
-
-    async def handle_set_light_color(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for set_light_color tool."""
-        try:
-            device_id = arguments["device_id"]
-            hue_degrees = arguments["hue"]  # 0-360
-            saturation_percent = arguments["saturation"]  # 0-100
-            brightness_percent = arguments.get("brightness")  # Optional 0-100
-
-            # Get device info
-            device = await self.homey_client.get_device(device_id)
-            device_name = device.get("name", device_id)
-            device_class = device.get("class")
-            capabilities = device.get("capabilitiesObj", {})
-
-            # Check if it's a light
-            if device_class != "light":
-                return [TextContent(type="text", text=f"❌ Device '{device_name}' is not a light (class: {device_class})")]
-
-            # Check color capabilities
-            missing_caps = []
-            if "light_hue" not in capabilities:
-                missing_caps.append("light_hue")
-            if "light_saturation" not in capabilities:
-                missing_caps.append("light_saturation")
-            
-            if missing_caps:
-                return [TextContent(type="text", text=f"❌ Light '{device_name}' has no color support (missing: {', '.join(missing_caps)})")]
-
-            # Convert values to Homey format
-            hue_value = hue_degrees / 360.0  # 0-360° to 0.0-1.0
-            saturation_value = saturation_percent / 100.0  # 0-100% to 0.0-1.0
-
-            # Set color mode to color
-            if "light_mode" in capabilities:
-                await self.homey_client.set_capability_value(device_id, "light_mode", "color")
-
-            # Set color properties
-            await self.homey_client.set_capability_value(device_id, "light_hue", hue_value)
-            await self.homey_client.set_capability_value(device_id, "light_saturation", saturation_value)
-
-            result_text = f"✅ Light '{device_name}' color set (hue: {hue_degrees}°, saturation: {saturation_percent}%"
-
-            # Set brightness if specified
-            if brightness_percent is not None and "dim" in capabilities:
-                brightness_value = max(0.01, brightness_percent / 100.0)
-                await self.homey_client.set_capability_value(device_id, "dim", brightness_value)
-                await self.homey_client.set_capability_value(device_id, "onoff", True)
-                result_text += f", brightness: {brightness_percent}%"
-
-            result_text += ")"
-
-            return [TextContent(type="text", text=result_text)]
-
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error setting light color: {str(e)}")]
