@@ -207,17 +207,14 @@ Switch modes by editing your Claude Desktop config and restarting Claude:
 
 ## 🛠️ Available Tools (17 total)
 
-### 📱 Device Control (8 tools)
-`get_devices` • `control_device` • `get_device_status` • `find_devices_by_zone` • `control_lights_in_zone` • `set_thermostat_temperature` • `set_light_color` • `get_sensor_readings`
+### 📱 Device Control (7 tools)
+`get_devices` • `control_device` • `get_device_status` • `get_zones` • `find_devices_by_zone` • `control_lights_in_zone` • `get_sensor_readings`
 
-### 🏠 Zone Management (1 tool)
-`get_zones`
+### 🔄 Flow Management (7 tools)
+`get_flows` • `get_flow` • `trigger_flow` • `get_device_flow_capabilities` • `get_flow_folders` • `get_flow_cards` • `run_flow_card_action`
 
-### 🔄 Flow Management (3 tools)  
-`get_flows` • `trigger_flow` • `find_flow_by_name`
-
-### 📊 Analytics & Insights (5 tools)
-`get_device_insights` • `get_energy_insights` • `get_live_insights` • `get_energy_report_hourly` • `get_energy_report_yearly`
+### 📊 Insights & Analytics (3 tools)
+`get_device_insights` • `get_energy_data` • `get_live_insights`
 
 ## 💬 Usage Examples
 

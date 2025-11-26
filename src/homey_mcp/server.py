@@ -131,32 +131,6 @@ async def control_lights_in_zone(zone_name: str, action: str, brightness: int = 
 
 
 @mcp.tool()
-async def set_thermostat_temperature(device_id: str, temperature: float) -> str:
-    """Set the desired temperature of a thermostat."""
-    try:
-        arguments = {"device_id": device_id, "temperature": temperature}
-        result = await device_tools.climate.handle_set_thermostat_temperature(arguments)
-        return result[0].text if result else "Thermostat not set"
-    except Exception as e:
-        logger.error(f"Error in set_thermostat_temperature: {e}")
-        return f"Error setting thermostat: {str(e)}"
-
-
-@mcp.tool()
-async def set_light_color(device_id: str, hue: float, saturation: float, brightness: float = None) -> str:
-    """Set the color of a light."""
-    try:
-        arguments = {"device_id": device_id, "hue": hue, "saturation": saturation}
-        if brightness is not None:
-            arguments["brightness"] = brightness
-        result = await device_tools.lighting.handle_set_light_color(arguments)
-        return result[0].text if result else "Light color not set"
-    except Exception as e:
-        logger.error(f"Error in set_light_color: {e}")
-        return f"Error setting light color: {str(e)}"
-
-
-@mcp.tool()
 async def get_sensor_readings(zone_name: str, sensor_type: str = "all") -> str:
     """Get sensor readings from a specific zone."""
     try:
@@ -168,13 +142,24 @@ async def get_sensor_readings(zone_name: str, sensor_type: str = "all") -> str:
         return f"Error getting sensor data: {str(e)}"
 
 
-# ================== BASIC FLOW TOOLS ==================
+@mcp.tool()
+async def get_zones() -> str:
+    """Get all available zones in Homey."""
+    try:
+        result = await device_tools.handle_get_zones({})
+        return result[0].text if result else "No zones found"
+    except Exception as e:
+        logger.error(f"Error in get_zones: {e}")
+        return f"Error getting zones: {str(e)}"
+
+
+# ================== UNIFIED FLOW TOOLS ==================
 
 @mcp.tool()
-async def get_flows() -> str:
-    """Get all Homey flows (automation)."""
+async def get_flows(flow_type: str = "all") -> str:
+    """Get all Homey flows. Can retrieve basic flows, advanced flows, or both."""
     try:
-        result = await flow_tools.handle_get_flows({})
+        result = await flow_tools.handle_get_flows({"flow_type": flow_type})
         return result[0].text if result else "No flows found"
     except Exception as e:
         logger.error(f"Error in get_flows: {e}")
@@ -182,10 +167,10 @@ async def get_flows() -> str:
 
 
 @mcp.tool()
-async def get_flow(flow_id: str) -> str:
-    """Get specific flow by ID."""
+async def get_flow(flow_id: str, flow_type: str = "auto") -> str:
+    """Get specific flow by ID. Works for both basic and advanced flows."""
     try:
-        result = await flow_tools.handle_get_flow({"flow_id": flow_id})
+        result = await flow_tools.handle_get_flow({"flow_id": flow_id, "flow_type": flow_type})
         return result[0].text if result else "Flow not found"
     except Exception as e:
         logger.error(f"Error in get_flow: {e}")
@@ -193,180 +178,15 @@ async def get_flow(flow_id: str) -> str:
 
 
 @mcp.tool()
-async def create_flow(name: str, trigger: dict, actions: list, conditions: list = None, folder: str = None, enabled: bool = True) -> str:
-    """Create a new flow."""
+async def trigger_flow(flow_id: str, flow_type: str = "auto") -> str:
+    """Trigger a Homey flow. Works for both basic and advanced flows."""
     try:
-        arguments = {
-            "name": name,
-            "trigger": trigger,
-            "actions": actions
-        }
-        if conditions:
-            arguments["conditions"] = conditions
-        if folder:
-            arguments["folder"] = folder
-        if enabled is not None:
-            arguments["enabled"] = enabled
-            
-        result = await flow_tools.handle_create_flow(arguments)
-        return result[0].text if result else "Flow not created"
-    except Exception as e:
-        logger.error(f"Error in create_flow: {e}")
-        return f"Error creating flow: {str(e)}"
-
-
-@mcp.tool()
-async def update_flow(flow_id: str, enabled: bool = None, name: str = None, folder: str = None) -> str:
-    """Update flow properties (enable/disable, rename, etc.)."""
-    try:
-        arguments = {"flow_id": flow_id}
-        if enabled is not None:
-            arguments["enabled"] = enabled
-        if name:
-            arguments["name"] = name
-        if folder:
-            arguments["folder"] = folder
-            
-        result = await flow_tools.handle_update_flow(arguments)
-        return result[0].text if result else "Flow not updated"
-    except Exception as e:
-        logger.error(f"Error in update_flow: {e}")
-        return f"Error updating flow: {str(e)}"
-
-
-@mcp.tool()
-async def delete_flow(flow_id: str) -> str:
-    """Delete a flow."""
-    try:
-        result = await flow_tools.handle_delete_flow({"flow_id": flow_id})
-        return result[0].text if result else "Flow not deleted"
-    except Exception as e:
-        logger.error(f"Error in delete_flow: {e}")
-        return f"Error deleting flow: {str(e)}"
-
-
-@mcp.tool()
-async def trigger_flow(flow_id: str) -> str:
-    """Start a specific Homey flow."""
-    try:
-        arguments = {"flow_id": flow_id}
+        arguments = {"flow_id": flow_id, "flow_type": flow_type}
         result = await flow_tools.handle_trigger_flow(arguments)
-        return result[0].text if result else "Flow not started"
+        return result[0].text if result else "Flow not triggered"
     except Exception as e:
         logger.error(f"Error in trigger_flow: {e}")
-        return f"Error starting flow: {str(e)}"
-
-
-@mcp.tool()
-async def test_flow(flow_data: dict, tokens: dict = None) -> str:
-    """Test a flow before saving/triggering."""
-    try:
-        arguments = {"flow_data": flow_data}
-        if tokens:
-            arguments["tokens"] = tokens
-            
-        result = await flow_tools.handle_test_flow(arguments)
-        return result[0].text if result else "Flow test failed"
-    except Exception as e:
-        logger.error(f"Error in test_flow: {e}")
-        return f"Error testing flow: {str(e)}"
-
-
-@mcp.tool()
-async def find_flow_by_name(flow_name: str) -> str:
-    """Search flows by name."""
-    try:
-        arguments = {"flow_name": flow_name}
-        result = await flow_tools.handle_find_flow_by_name(arguments)
-        return result[0].text if result else "No flows found"
-    except Exception as e:
-        logger.error(f"Error in find_flow_by_name: {e}")
-        return f"Error searching flows: {str(e)}"
-
-
-# ================== ADVANCED FLOW TOOLS ==================
-
-@mcp.tool()
-async def get_advanced_flows() -> str:
-    """Get all advanced flows (complex automations)."""
-    try:
-        result = await flow_tools.handle_get_advanced_flows({})
-        return result[0].text if result else "No advanced flows found"
-    except Exception as e:
-        logger.error(f"Error in get_advanced_flows: {e}")
-        return f"Error getting advanced flows: {str(e)}"
-
-
-@mcp.tool()
-async def get_advanced_flow(flow_id: str) -> str:
-    """Get specific advanced flow by ID."""
-    try:
-        result = await flow_tools.handle_get_advanced_flow({"flow_id": flow_id})
-        return result[0].text if result else "Advanced flow not found"
-    except Exception as e:
-        logger.error(f"Error in get_advanced_flow: {e}")
-        return f"Error getting advanced flow: {str(e)}"
-
-
-@mcp.tool()
-async def trigger_advanced_flow(flow_id: str) -> str:
-    """Trigger an advanced flow."""
-    try:
-        result = await flow_tools.handle_trigger_advanced_flow({"flow_id": flow_id})
-        return result[0].text if result else "Advanced flow not triggered"
-    except Exception as e:
-        logger.error(f"Error in trigger_advanced_flow: {e}")
-        return f"Error triggering advanced flow: {str(e)}"
-
-
-@mcp.tool()
-async def create_advanced_flow(name: str, cards: list, enabled: bool = True, folder: str = None) -> str:
-    """Create a new advanced flow."""
-    try:
-        arguments = {
-            "name": name,
-            "cards": cards,
-            "enabled": enabled
-        }
-        if folder:
-            arguments["folder"] = folder
-
-        result = await flow_tools.handle_create_advanced_flow(arguments)
-        return result[0].text if result else "Advanced flow not created"
-    except Exception as e:
-        logger.error(f"Error in create_advanced_flow: {e}")
-        return f"Error creating advanced flow: {str(e)}"
-
-
-@mcp.tool()
-async def update_advanced_flow(flow_id: str, name: str = None, enabled: bool = None, folder: str = None) -> str:
-    """Update an existing advanced flow."""
-    try:
-        arguments = {"flow_id": flow_id}
-        if name:
-            arguments["name"] = name
-        if enabled is not None:
-            arguments["enabled"] = enabled
-        if folder:
-            arguments["folder"] = folder
-
-        result = await flow_tools.handle_update_advanced_flow(arguments)
-        return result[0].text if result else "Advanced flow not updated"
-    except Exception as e:
-        logger.error(f"Error in update_advanced_flow: {e}")
-        return f"Error updating advanced flow: {str(e)}"
-
-
-@mcp.tool()
-async def delete_advanced_flow(flow_id: str) -> str:
-    """Delete an advanced flow."""
-    try:
-        arguments = {"flow_id": flow_id}
-        result = await flow_tools.handle_delete_advanced_flow(arguments)
-        return result[0].text if result else "Advanced flow not deleted"
-    except Exception as e:
-        logger.error(f"Error in delete_advanced_flow: {e}")
-        return f"Error deleting advanced flow: {str(e)}"
+        return f"Error triggering flow: {str(e)}"
 
 
 # ================== FLOW FOLDER TOOLS ==================
@@ -382,124 +202,28 @@ async def get_flow_folders() -> str:
         return f"Error getting flow folders: {str(e)}"
 
 
-@mcp.tool()
-async def create_flow_folder(name: str, parent: str = None) -> str:
-    """Create a new flow folder for organization."""
-    try:
-        arguments = {"name": name}
-        if parent:
-            arguments["parent"] = parent
-            
-        result = await flow_tools.handle_create_flow_folder(arguments)
-        return result[0].text if result else "Flow folder not created"
-    except Exception as e:
-        logger.error(f"Error in create_flow_folder: {e}")
-        return f"Error creating flow folder: {str(e)}"
-
-
 # ================== FLOW CARD TOOLS ==================
 
 @mcp.tool()
-async def get_flow_card_triggers() -> str:
-    """Get available flow triggers for building flows."""
-    try:
-        result = await flow_tools.handle_get_flow_card_triggers({})
-        return result[0].text if result else "No flow triggers found"
-    except Exception as e:
-        logger.error(f"Error in get_flow_card_triggers: {e}")
-        return f"Error getting flow triggers: {str(e)}"
-
-
-@mcp.tool()
-async def get_flow_card_conditions() -> str:
-    """Get available flow conditions for building flows."""
-    try:
-        result = await flow_tools.handle_get_flow_card_conditions({})
-        return result[0].text if result else "No flow conditions found"
-    except Exception as e:
-        logger.error(f"Error in get_flow_card_conditions: {e}")
-        return f"Error getting flow conditions: {str(e)}"
-
-
-@mcp.tool()
-async def get_flow_card_actions() -> str:
-    """Get available flow actions for building flows."""
-    try:
-        result = await flow_tools.handle_get_flow_card_actions({})
-        return result[0].text if result else "No flow actions found"
-    except Exception as e:
-        logger.error(f"Error in get_flow_card_actions: {e}")
-        return f"Error getting flow actions: {str(e)}"
-
-
-# ================== FLOW BUILDER TOOLS ==================
-
-@mcp.tool()
-async def build_flow_from_description(name: str, trigger_name: str, action_names: list, condition_names: list = None, folder: str = None) -> str:
-    """Build a flow using simple card names instead of complex structures."""
+async def get_flow_cards(card_type: str = "all", limit: int = 50, offset: int = 0, summary_mode: bool = False, filter_uri: str = None) -> str:
+    """Get available flow cards (triggers, conditions, or actions) for building flows."""
     try:
         arguments = {
-            "name": name,
-            "trigger_name": trigger_name,
-            "action_names": action_names
+            "card_type": card_type,
+            "limit": limit,
+            "offset": offset,
+            "summary_mode": summary_mode
         }
-        if condition_names:
-            arguments["condition_names"] = condition_names
-        if folder:
-            arguments["folder"] = folder
-
-        result = await flow_tools.handle_build_flow_from_description(arguments)
-        return result[0].text if result else "Flow not built"
+        if filter_uri:
+            arguments["filter_uri"] = filter_uri
+        result = await flow_tools.handle_get_flow_cards(arguments)
+        return result[0].text if result else "No flow cards found"
     except Exception as e:
-        logger.error(f"Error in build_flow_from_description: {e}")
-        return f"Error building flow: {str(e)}"
+        logger.error(f"Error in get_flow_cards: {e}")
+        return f"Error getting flow cards: {str(e)}"
 
 
-@mcp.tool()
-async def build_advanced_flow_from_description(name: str, card_descriptions: list, folder: str = None) -> str:
-    """Build an advanced flow using simple card descriptions."""
-    try:
-        arguments = {
-            "name": name,
-            "card_descriptions": card_descriptions
-        }
-        if folder:
-            arguments["folder"] = folder
-
-        result = await flow_tools.handle_build_advanced_flow_from_description(arguments)
-        return result[0].text if result else "Advanced flow not built"
-    except Exception as e:
-        logger.error(f"Error in build_advanced_flow_from_description: {e}")
-        return f"Error building advanced flow: {str(e)}"
-
-
-@mcp.tool()
-async def find_flow_cards(search_term: str, card_type: str = "all") -> str:
-    """Search for available flow cards by name."""
-    try:
-        arguments = {
-            "search_term": search_term,
-            "card_type": card_type
-        }
-        result = await flow_tools.handle_find_flow_cards(arguments)
-        return result[0].text if result else "No cards found"
-    except Exception as e:
-        logger.error(f"Error in find_flow_cards: {e}")
-        return f"Error searching cards: {str(e)}"
-
-
-# ================== FLOW STATE & TESTING TOOLS ==================
-
-@mcp.tool()
-async def get_flow_state() -> str:
-    """Get overall flow manager statistics."""
-    try:
-        result = await flow_tools.handle_get_flow_state({})
-        return result[0].text if result else "Flow state not available"
-    except Exception as e:
-        logger.error(f"Error in get_flow_state: {e}")
-        return f"Error getting flow state: {str(e)}"
-
+# ================== FLOW TESTING TOOLS ==================
 
 @mcp.tool()
 async def run_flow_card_action(uri: str, action_id: str, args: dict = None) -> str:
@@ -539,17 +263,19 @@ async def get_device_insights(device_id: str, capability: str, period: str = "7d
 
 
 @mcp.tool()
-async def get_energy_insights(period: str = "7d", device_filter: list = None, group_by: str = "device") -> str:
-    """Get energy consumption data from devices."""
+async def get_energy_data(period: str = "7d", device_filter: list = None, group_by: str = "device", cache: str = None) -> str:
+    """Get energy consumption data. Supports relative periods (1d/7d/30d/1y), specific hours (YYYY-MM-DD-HH), or specific years (YYYY)."""
     try:
         arguments = {"period": period, "group_by": group_by}
         if device_filter:
             arguments["device_filter"] = device_filter
-        result = await insights_tools.energy.handle_get_energy_insights(arguments)
+        if cache:
+            arguments["cache"] = cache
+        result = await insights_tools.energy.handle_get_energy_data(arguments)
         return result[0].text if result else "No energy data found"
     except Exception as e:
-        logger.error(f"Error in get_energy_insights: {e}")
-        return f"Error getting energy insights: {str(e)}"
+        logger.error(f"Error in get_energy_data: {e}")
+        return f"Error getting energy data: {str(e)}"
 
 
 @mcp.tool()
@@ -564,34 +290,6 @@ async def get_live_insights(metrics: list = None) -> str:
     except Exception as e:
         logger.error(f"Error in get_live_insights: {e}")
         return f"Error getting live insights: {str(e)}"
-
-
-@mcp.tool()
-async def get_energy_report_hourly(date_hour: str, cache: str = None) -> str:
-    """Get hourly energy consumption report for a specific hour."""
-    try:
-        arguments = {"date_hour": date_hour}
-        if cache:
-            arguments["cache"] = cache
-        result = await insights_tools.energy.handle_get_energy_report_hourly(arguments)
-        return result[0].text if result else "No hourly data found"
-    except Exception as e:
-        logger.error(f"Error in get_energy_report_hourly: {e}")
-        return f"Error getting hourly energy report: {str(e)}"
-
-
-@mcp.tool()
-async def get_energy_report_yearly(year: str, cache: str = None) -> str:
-    """Get yearly energy consumption report for a specific year."""
-    try:
-        arguments = {"year": year}
-        if cache:
-            arguments["cache"] = cache
-        result = await insights_tools.energy.handle_get_energy_report_yearly(arguments)
-        return result[0].text if result else "No yearly data found"
-    except Exception as e:
-        logger.error(f"Error in get_energy_report_yearly: {e}")
-        return f"Error getting yearly energy report: {str(e)}"
 
 
 async def cleanup():

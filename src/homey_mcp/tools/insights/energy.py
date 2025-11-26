@@ -17,72 +17,153 @@ class EnergyInsightsTools:
         """Return energy insights tools."""
         return [
             Tool(
-                name="get_energy_insights",
-                description="Get energy consumption data from devices",
+                name="get_energy_data",
+                description="Get energy consumption data. Supports relative periods (1d, 7d, 30d, 1y), specific hours (YYYY-MM-DD-HH), or specific years (YYYY).",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "period": {
                             "type": "string",
-                            "enum": ["1d", "7d", "30d", "1y"],
-                            "default": "7d"
+                            "default": "7d",
+                            "description": "Time period: relative (1d/7d/30d/1y), specific hour (2024-01-15-14), or specific year (2024)"
                         },
                         "device_filter": {
                             "type": "array",
-                            "items": {"type": "string"}
+                            "items": {"type": "string"},
+                            "description": "Optional: Filter by specific device IDs (only for relative periods)"
                         },
                         "group_by": {
                             "type": "string",
                             "enum": ["device", "zone", "type", "total"],
-                            "default": "device"
+                            "default": "device",
+                            "description": "How to group data (only for relative periods)"
+                        },
+                        "cache": {
+                            "type": "string",
+                            "description": "Cache control parameter (optional, for specific hour/year queries)"
                         }
                     }
-                }
-            ),
-            Tool(
-                name="get_energy_report_hourly",
-                description="Get hourly energy consumption report for a specific hour",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "date_hour": {
-                            "type": "string",
-                            "description": "Date and hour in format YYYY-MM-DD-HH (e.g. 2024-01-15-14)"
-                        },
-                        "cache": {
-                            "type": "string",
-                            "description": "Cache control parameter (optional)"
-                        }
-                    },
-                    "required": ["date_hour"]
-                }
-            ),
-            Tool(
-                name="get_energy_report_yearly", 
-                description="Get yearly energy consumption report for a specific year",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "year": {
-                            "type": "string",
-                            "description": "Year in format YYYY (e.g. 2024)"
-                        },
-                        "cache": {
-                            "type": "string",
-                            "description": "Cache control parameter (optional)"
-                        }
-                    },
-                    "required": ["year"]
                 }
             )
         ]
 
-    async def handle_get_energy_insights(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_energy_insights tool using ManagerEnergy API."""
+    async def handle_get_energy_data(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Unified handler for all energy data requests."""
         try:
             period = arguments.get("period", "7d")
-            device_filter = arguments.get("device_filter", [])
-            group_by = arguments.get("group_by", "device")
+            cache = arguments.get("cache")
+
+            # Determine report type based on period format
+            import re
+
+            # Check if it's a specific hour (YYYY-MM-DD-HH)
+            if re.match(r'^\d{4}-\d{2}-\d{2}-\d{2}$', period):
+                return await self._handle_hourly_report(period, cache)
+
+            # Check if it's a specific year (YYYY)
+            elif re.match(r'^\d{4}$', period):
+                return await self._handle_yearly_report(period, cache)
+
+            # Otherwise treat as relative period
+            else:
+                device_filter = arguments.get("device_filter", [])
+                group_by = arguments.get("group_by", "device")
+                return await self._handle_relative_period(period, device_filter, group_by)
+
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error getting energy data: {str(e)}")]
+
+    async def _handle_hourly_report(self, date_hour: str, cache: str = None) -> List[TextContent]:
+        """Handle specific hourly energy report."""
+        try:
+            result = await self.homey_client.get_energy_report_hour(date_hour, cache)
+
+            # Format the response nicely
+            response_text = f"⏰ **Hourly Energy Report - {date_hour}**\n\n"
+
+            if "electricity" in result:
+                elec = result["electricity"]
+                response_text += f"⚡ **Electricity:**\n"
+                response_text += f"  • Consumed: {elec.get('consumed', 0)} kWh\n"
+                response_text += f"  • Produced: {elec.get('produced', 0)} kWh\n"
+                response_text += f"  • Cost: €{elec.get('cost', 0)}\n\n"
+
+            if "gas" in result:
+                gas = result["gas"]
+                response_text += f"🔥 **Gas:**\n"
+                response_text += f"  • Consumed: {gas.get('consumed', 0)} m³\n"
+                response_text += f"  • Cost: €{gas.get('cost', 0)}\n\n"
+
+            if "water" in result:
+                water = result["water"]
+                response_text += f"💧 **Water:**\n"
+                response_text += f"  • Consumed: {water.get('consumed', 0)} L\n"
+                response_text += f"  • Cost: €{water.get('cost', 0)}\n"
+
+            response_text += f"\n🔄 *Data from Homey Energy Manager*"
+
+            return [TextContent(type="text", text=response_text)]
+
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error getting hourly energy report: {str(e)}")]
+
+    async def _handle_yearly_report(self, year: str, cache: str = None) -> List[TextContent]:
+        """Handle specific yearly energy report."""
+        try:
+            result = await self.homey_client.get_energy_report_year(year, cache)
+
+            # Format the response nicely
+            response_text = f"📅 **Yearly Energy Report - {year}**\n\n"
+
+            if "electricity" in result:
+                elec = result["electricity"]
+                response_text += f"⚡ **Electricity:**\n"
+                response_text += f"  • Consumed: {elec.get('consumed', 0):,.1f} kWh\n"
+                response_text += f"  • Produced: {elec.get('produced', 0):,.1f} kWh\n"
+                response_text += f"  • Cost: €{elec.get('cost', 0):,.2f}\n"
+
+                # Add monthly average
+                consumed = elec.get('consumed', 0)
+                if consumed > 0:
+                    monthly_avg = consumed / 12
+                    response_text += f"  • Monthly average: {monthly_avg:,.1f} kWh\n"
+                response_text += "\n"
+
+            if "gas" in result:
+                gas = result["gas"]
+                response_text += f"🔥 **Gas:**\n"
+                response_text += f"  • Consumed: {gas.get('consumed', 0):,.1f} m³\n"
+                response_text += f"  • Cost: €{gas.get('cost', 0):,.2f}\n"
+
+                # Add monthly average
+                consumed = gas.get('consumed', 0)
+                if consumed > 0:
+                    monthly_avg = consumed / 12
+                    response_text += f"  • Monthly average: {monthly_avg:,.1f} m³\n"
+                response_text += "\n"
+
+            if "water" in result:
+                water = result["water"]
+                response_text += f"💧 **Water:**\n"
+                response_text += f"  • Consumed: {water.get('consumed', 0):,.0f} L\n"
+                response_text += f"  • Cost: €{water.get('cost', 0):,.2f}\n"
+
+                # Add monthly average
+                consumed = water.get('consumed', 0)
+                if consumed > 0:
+                    monthly_avg = consumed / 12
+                    response_text += f"  • Monthly average: {monthly_avg:,.0f} L\n"
+
+            response_text += f"\n🔄 *Data from Homey Energy Manager*"
+
+            return [TextContent(type="text", text=response_text)]
+
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error getting yearly energy report: {str(e)}")]
+
+    async def _handle_relative_period(self, period: str, device_filter: List[str], group_by: str) -> List[TextContent]:
+        """Handle relative period energy overview (original get_energy_insights logic)."""
+        try:
             
             response_text = f"🔋 **Energy Insights - {period}**\n\n"
             
@@ -253,97 +334,3 @@ class EnergyInsightsTools:
 
         except Exception as e:
             return [TextContent(type="text", text=f"❌ Error getting energy insights: {str(e)}")]
-
-    async def handle_get_energy_report_hourly(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_energy_report_hourly tool."""
-        try:
-            date_hour = arguments["date_hour"]
-            cache = arguments.get("cache")
-            
-            result = await self.homey_client.get_energy_report_hour(date_hour, cache)
-            
-            # Format the response nicely
-            response_text = f"⏰ **Hourly Energy Report - {date_hour}**\n\n"
-            
-            if "electricity" in result:
-                elec = result["electricity"]
-                response_text += f"⚡ **Electricity:**\n"
-                response_text += f"  • Consumed: {elec.get('consumed', 0)} kWh\n"
-                response_text += f"  • Produced: {elec.get('produced', 0)} kWh\n"
-                response_text += f"  • Cost: €{elec.get('cost', 0)}\n\n"
-            
-            if "gas" in result:
-                gas = result["gas"]
-                response_text += f"🔥 **Gas:**\n"
-                response_text += f"  • Consumed: {gas.get('consumed', 0)} m³\n"
-                response_text += f"  • Cost: €{gas.get('cost', 0)}\n\n"
-            
-            if "water" in result:
-                water = result["water"]
-                response_text += f"💧 **Water:**\n"
-                response_text += f"  • Consumed: {water.get('consumed', 0)} L\n"
-                response_text += f"  • Cost: €{water.get('cost', 0)}\n"
-            
-            response_text += f"\n🔄 *Data from Homey Energy Manager*"
-            
-            return [TextContent(type="text", text=response_text)]
-            
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting hourly energy report: {str(e)}")]
-
-    async def handle_get_energy_report_yearly(self, arguments: Dict[str, Any]) -> List[TextContent]:
-        """Handler for get_energy_report_yearly tool."""
-        try:
-            year = arguments["year"]
-            cache = arguments.get("cache")
-            
-            result = await self.homey_client.get_energy_report_year(year, cache)
-            
-            # Format the response nicely
-            response_text = f"📅 **Yearly Energy Report - {year}**\n\n"
-            
-            if "electricity" in result:
-                elec = result["electricity"]
-                response_text += f"⚡ **Electricity:**\n"
-                response_text += f"  • Consumed: {elec.get('consumed', 0):,.1f} kWh\n"
-                response_text += f"  • Produced: {elec.get('produced', 0):,.1f} kWh\n"
-                response_text += f"  • Cost: €{elec.get('cost', 0):,.2f}\n"
-                
-                # Add monthly average
-                consumed = elec.get('consumed', 0)
-                if consumed > 0:
-                    monthly_avg = consumed / 12
-                    response_text += f"  • Monthly average: {monthly_avg:,.1f} kWh\n"
-                response_text += "\n"
-            
-            if "gas" in result:
-                gas = result["gas"]
-                response_text += f"🔥 **Gas:**\n"
-                response_text += f"  • Consumed: {gas.get('consumed', 0):,.1f} m³\n"
-                response_text += f"  • Cost: €{gas.get('cost', 0):,.2f}\n"
-                
-                # Add monthly average
-                consumed = gas.get('consumed', 0)
-                if consumed > 0:
-                    monthly_avg = consumed / 12
-                    response_text += f"  • Monthly average: {monthly_avg:,.1f} m³\n"
-                response_text += "\n"
-            
-            if "water" in result:
-                water = result["water"]
-                response_text += f"💧 **Water:**\n"
-                response_text += f"  • Consumed: {water.get('consumed', 0):,.0f} L\n"
-                response_text += f"  • Cost: €{water.get('cost', 0):,.2f}\n"
-                
-                # Add monthly average
-                consumed = water.get('consumed', 0)
-                if consumed > 0:
-                    monthly_avg = consumed / 12
-                    response_text += f"  • Monthly average: {monthly_avg:,.0f} L\n"
-            
-            response_text += f"\n🔄 *Data from Homey Energy Manager*"
-            
-            return [TextContent(type="text", text=response_text)]
-            
-        except Exception as e:
-            return [TextContent(type="text", text=f"❌ Error getting yearly energy report: {str(e)}")]
