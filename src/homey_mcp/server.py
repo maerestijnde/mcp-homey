@@ -205,8 +205,13 @@ async def get_flow_folders() -> str:
 # ================== FLOW CARD TOOLS ==================
 
 @mcp.tool()
-async def get_flow_cards(card_type: str = "all", limit: int = 50, offset: int = 0, summary_mode: bool = False, filter_uri: str = None) -> str:
-    """Get available flow cards (triggers, conditions, or actions) for building flows."""
+async def get_flow_cards(card_type: str = "all", limit: int = 50, offset: int = 0, summary_mode: bool = False, filter_uri: str = None, search: str = None) -> str:
+    """Get available flow cards (triggers, conditions, or actions) for building flows.
+
+    Use `search` (text in id/title, e.g. 'webhook', 'notification', a device id) or `filter_uri`
+    (id pattern, e.g. 'homey:device:<device-id>') to narrow the 3000+ cards. The returned `id` is
+    the full card id to use in advanced flows.
+    """
     try:
         arguments = {
             "card_type": card_type,
@@ -216,11 +221,67 @@ async def get_flow_cards(card_type: str = "all", limit: int = 50, offset: int = 
         }
         if filter_uri:
             arguments["filter_uri"] = filter_uri
+        if search:
+            arguments["search"] = search
         result = await flow_tools.handle_get_flow_cards(arguments)
         return result[0].text if result else "No flow cards found"
     except Exception as e:
         logger.error(f"Error in get_flow_cards: {e}")
         return f"Error getting flow cards: {str(e)}"
+
+
+# ================== ADVANCED FLOW BUILDER TOOLS ==================
+
+@mcp.tool()
+async def create_advanced_flow(name: str, cards: dict, enabled: bool = False, folder: str = None, dry_run: bool = True) -> str:
+    """Create an advanced flow. Validated against the Homey's real flow cards; dry_run=true (default) only validates.
+
+    `cards` is an object keyed by a fresh UUID per card. Every card needs `type`, `x`, `y`:
+    - trigger / condition / action: `id` = full card id from get_flow_cards (e.g. 'homey:manager:logic:webhook',
+      'homey:device:<device-id>:on'), `args` = {arg name: value} for its required args.
+    - links: `outputSuccess` (trigger/action/delay/all/any), `outputTrue` / `outputFalse` (condition),
+      `outputError` = list of target card UUIDs.
+    - builtins: 'start'; 'delay' with args.delay = {"number": "5", "multiplier": 1 (seconds) or 60 (minutes)};
+      'all' / 'any' with input = ["<card UUID>::outputTrue", ...]; 'note' with value and color (yellow/red/green/blue).
+    Lay cards out left to right (x += 400 per step, y += 150 per branch).
+
+    Example: {"<uuid-1>": {"type": "trigger", "id": "homey:manager:logic:webhook", "args": {"event": "test"},
+    "x": 100, "y": 100, "outputSuccess": ["<uuid-2>"]}, "<uuid-2>": {"type": "action",
+    "id": "homey:manager:notifications:create_notification", "args": {"text": "hi"}, "x": 500, "y": 100}}
+    """
+    try:
+        result = await flow_tools.handle_create_advanced_flow(
+            {"name": name, "cards": cards, "enabled": enabled, "folder": folder, "dry_run": dry_run}
+        )
+        return result[0].text if result else "Advanced flow not created"
+    except Exception as e:
+        logger.error(f"Error in create_advanced_flow: {e}")
+        return f"Error creating advanced flow: {str(e)}"
+
+
+@mcp.tool()
+async def update_advanced_flow(flow_id: str, name: str = None, enabled: bool = None, cards: dict = None, folder: str = None, dry_run: bool = True) -> str:
+    """Update an advanced flow. Only given fields change; `cards` replaces ALL cards, so get_flow first and send
+    the full edited card set. Same card format as create_advanced_flow. dry_run=true (default) only validates."""
+    try:
+        result = await flow_tools.handle_update_advanced_flow(
+            {"flow_id": flow_id, "name": name, "enabled": enabled, "cards": cards, "folder": folder, "dry_run": dry_run}
+        )
+        return result[0].text if result else "Advanced flow not updated"
+    except Exception as e:
+        logger.error(f"Error in update_advanced_flow: {e}")
+        return f"Error updating advanced flow: {str(e)}"
+
+
+@mcp.tool()
+async def delete_advanced_flow(flow_id: str, confirm_name: str) -> str:
+    """Delete an advanced flow. confirm_name must exactly match the flow's current name."""
+    try:
+        result = await flow_tools.handle_delete_advanced_flow({"flow_id": flow_id, "confirm_name": confirm_name})
+        return result[0].text if result else "Advanced flow not deleted"
+    except Exception as e:
+        logger.error(f"Error in delete_advanced_flow: {e}")
+        return f"Error deleting advanced flow: {str(e)}"
 
 
 # ================== FLOW TESTING TOOLS ==================

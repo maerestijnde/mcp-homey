@@ -80,13 +80,20 @@ class FlowManagementTools:
                         "limit": {"type": "integer", "description": "Maximum number of results to return (default: 50, max: 200)", "default": 50},
                         "offset": {"type": "integer", "description": "Number of results to skip (for pagination)", "default": 0},
                         "summary_mode": {"type": "boolean", "description": "Return only essential fields (id, uri, title) to save tokens", "default": False},
-                        "filter_uri": {"type": "string", "description": "Filter by URI pattern (e.g., 'homey:device:', 'homey:manager:')"}
+                        "filter_uri": {"type": "string", "description": "Filter by card id prefix/pattern (e.g., 'homey:device:', 'homey:manager:logic')"},
+                        "search": {"type": "string", "description": "Case-insensitive text search on card id and title"}
                     },
                     "required": []
                 },
             ),
 
             # ================== FLOW BUILDER HELPERS ==================
+            Tool(name="create_advanced_flow", description="Create an advanced flow (validated, dry_run by default)",
+                 inputSchema={"type": "object", "properties": {}, "required": ["name", "cards"]}),
+            Tool(name="update_advanced_flow", description="Update an advanced flow (validated, dry_run by default)",
+                 inputSchema={"type": "object", "properties": {}, "required": ["flow_id"]}),
+            Tool(name="delete_advanced_flow", description="Delete an advanced flow after name confirmation",
+                 inputSchema={"type": "object", "properties": {}, "required": ["flow_id", "confirm_name"]}),
 
             # ================== FLOW TESTING ==================
             Tool(
@@ -420,6 +427,7 @@ class FlowManagementTools:
             offset = arguments.get("offset", 0)
             summary_mode = arguments.get("summary_mode", False)
             filter_uri = arguments.get("filter_uri")
+            search = (arguments.get("search") or "").lower()
 
             # Determine which card types to fetch
             fetch_types = []
@@ -456,7 +464,10 @@ class FlowManagementTools:
 
             # Apply URI filter if specified
             if filter_uri:
-                all_cards = [c for c in all_cards if filter_uri in c.get("uri", "")]
+                all_cards = [c for c in all_cards if filter_uri in c.get("id", "")]
+            if search:
+                all_cards = [c for c in all_cards
+                             if search in c.get("id", "").lower() or search in str(c.get("title", "")).lower()]
 
             total_count = len(all_cards)
 
@@ -471,7 +482,6 @@ class FlowManagementTools:
                     # Return only essential fields
                     card_info = {
                         "id": card.get("id", "unknown"),
-                        "uri": card.get("uri"),
                         "title": card.get("title"),
                         "type": card.get("_type")
                     }
@@ -479,11 +489,12 @@ class FlowManagementTools:
                     # Return full information
                     card_info = {
                         "id": card.get("id", "unknown"),
-                        "uri": card.get("uri"),
                         "title": card.get("title"),
                         "type": card.get("_type"),
                         "titleFormatted": card.get("titleFormatted"),
-                        "args": card.get("args", [])
+                        "args": [{k: a.get(k) for k in ("name", "type", "required", "values") if a.get(k) is not None}
+                                 for a in card.get("args") or []],
+                        "tokens": [t.get("id") for t in card.get("tokens") or []]
                     }
                 card_list.append(card_info)
 
@@ -495,7 +506,9 @@ class FlowManagementTools:
             if offset + limit < total_count:
                 response_text += f"• More available: Use offset={offset + limit} to see next page\n"
             if filter_uri:
-                response_text += f"• Filtered by URI: {filter_uri}\n"
+                response_text += f"• Filtered by id: {filter_uri}\n"
+            if search:
+                response_text += f"• Search: {search}\n"
             response_text += "\n"
 
             response_text += json.dumps(card_list, indent=2, ensure_ascii=False)
@@ -507,6 +520,52 @@ class FlowManagementTools:
 
     # ================== FLOW BUILDER HANDLERS ==================
 
+    async def handle_create_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handler for create_advanced_flow tool."""
+        try:
+            flow = {k: arguments.get(k) for k in ("name", "enabled", "folder", "cards") if arguments.get(k) is not None}
+            result = await self.homey_client.create_advanced_flow(flow, dry_run=arguments.get("dry_run", True))
+            return [TextContent(type="text", text=self._format_write_result("created", result))]
+        except ValueError as e:
+            return [TextContent(type="text", text=f"❌ {str(e)}")]
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error creating advanced flow: {str(e)}")]
+
+    async def handle_update_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handler for update_advanced_flow tool."""
+        try:
+            changes = {k: arguments.get(k) for k in ("name", "enabled", "folder", "cards")}
+            result = await self.homey_client.update_advanced_flow(
+                arguments["flow_id"], changes, dry_run=arguments.get("dry_run", True)
+            )
+            return [TextContent(type="text", text=self._format_write_result("updated", result))]
+        except ValueError as e:
+            return [TextContent(type="text", text=f"❌ {str(e)}")]
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error updating advanced flow: {str(e)}")]
+
+    async def handle_delete_advanced_flow(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handler for delete_advanced_flow tool. Deletes only when confirm_name matches the flow's name."""
+        try:
+            flow_id = arguments["flow_id"]
+            flow = await self.homey_client.get_advanced_flow(flow_id)
+            if flow.get("name") != arguments.get("confirm_name"):
+                return [TextContent(type="text", text=f"❌ Not deleted: confirm_name must be exactly '{flow.get('name')}'")]
+            await self.homey_client.delete_advanced_flow(flow_id)
+            return [TextContent(type="text", text=f"✅ Advanced flow '{flow.get('name')}' deleted")]
+        except ValueError as e:
+            return [TextContent(type="text", text=f"❌ {str(e)}")]
+        except Exception as e:
+            return [TextContent(type="text", text=f"❌ Error deleting advanced flow: {str(e)}")]
+
+    @staticmethod
+    def _format_write_result(verb: str, result: Dict[str, Any]) -> str:
+        if result.get("dry_run"):
+            return ("🧪 Dry run OK, nothing sent to Homey. Call again with dry_run=false to apply.\n\n"
+                    + json.dumps(result["payload"], indent=2, ensure_ascii=False))
+        status = "⚠️ BROKEN" if result.get("broken") else "OK"
+        return (f"✅ Advanced flow '{result.get('name')}' {verb} (id: {result.get('id')}, "
+                f"enabled: {result.get('enabled')}, status: {status})")
 
 
 

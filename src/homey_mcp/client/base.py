@@ -182,11 +182,11 @@ class HomeyAPIClient:
     async def trigger_advanced_flow(self, flow_id: str) -> bool:
         return await self.flows.trigger_advanced_flow(flow_id)
 
-    async def create_advanced_flow(self, flow_data: Dict[str, Any]) -> Dict[str, Any]:
-        return await self.flows.create_advanced_flow(flow_data)
+    async def create_advanced_flow(self, flow_data: Dict[str, Any], dry_run: bool = False) -> Dict[str, Any]:
+        return await self.flows.create_advanced_flow(flow_data, dry_run)
 
-    async def update_advanced_flow(self, flow_id: str, flow_data: Dict[str, Any]) -> Dict[str, Any]:
-        return await self.flows.update_advanced_flow(flow_id, flow_data)
+    async def update_advanced_flow(self, flow_id: str, flow_data: Dict[str, Any], dry_run: bool = False) -> Dict[str, Any]:
+        return await self.flows.update_advanced_flow(flow_id, flow_data, dry_run)
 
     async def delete_advanced_flow(self, flow_id: str) -> bool:
         return await self.flows.delete_advanced_flow(flow_id)

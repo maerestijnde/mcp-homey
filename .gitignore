@@ -97,3 +97,6 @@ dmypy.json
 .claude/
 .claude.md
 claude.md
+
+# Local Homey dumps (device ids, personal data)
+ref/
