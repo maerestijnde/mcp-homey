@@ -127,13 +127,28 @@ class DeviceAPI:
             raise
 
     async def get_device(self, device_id: str) -> Dict[str, Any]:
-        """Get specific device."""
-        devices = await self.get_devices()
+        """Get specific device, read live from Homey (bypasses the device cache)."""
+        if self.client.config.offline_mode or self.client.config.demo_mode:
+            devices = await self.get_devices()
+            if device_id not in devices:
+                raise ValueError(f"Device {device_id} not found")
+            return devices[device_id]
 
-        if device_id not in devices:
+        response = await self.client.session.get(f"/api/manager/devices/device/{device_id}")
+        if response.status_code == 404:
             raise ValueError(f"Device {device_id} not found")
+        response.raise_for_status()
+        device = response.json()
 
-        return devices[device_id]
+        zones = await self.get_zones()
+        zone = zones.get(device.get("zone"))
+        device["zoneName"] = zone.get("name", "Unknown Zone") if zone else "No Zone"
+
+        # Keep the shared device cache in step with this live read
+        if self.client._device_cache:
+            self.client._device_cache[device_id] = device
+
+        return device
 
     def validate_capability_value(self, capability: str, value: Any) -> tuple[bool, Any, str]:
         """
