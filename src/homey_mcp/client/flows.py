@@ -52,11 +52,12 @@ def validate_advanced_flow(flow: Dict[str, Any], catalog: Dict[str, Dict[str, An
             errors.append(f"{where}: x and y must be numbers")
 
         if ctype in CATALOG_CARD_TYPES:
-            known = catalog.get(card.get("id"))
-            if known is None:
+            kinds = catalog.get(card.get("id"))
+            known = (kinds or {}).get(ctype)
+            if not kinds:
                 errors.append(f"{where}: no {ctype} card with id {card.get('id')!r} (use the full id from get_flow_cards)")
-            elif known["_kind"] != ctype:
-                errors.append(f"{where}: {card['id']!r} is a {known['_kind']} card, not a {ctype}")
+            elif known is None:
+                errors.append(f"{where}: {card['id']!r} is a {'/'.join(kinds)} card, not a {ctype}")
             else:
                 args = card.get("args") or {}
                 for arg in known.get("args") or []:
@@ -383,7 +384,7 @@ class FlowAPI:
             raise
 
     async def get_card_catalog(self) -> Dict[str, Dict[str, Any]]:
-        """All flow cards by full id, each tagged with its kind (trigger/condition/action)."""
+        """All flow cards as {full id: {kind: card}}; one id can be both a condition and an action (HomeyScript)."""
         if self._catalog and time.monotonic() - self._catalog_at < self.client.config.cache_ttl:
             return self._catalog
         catalog = {}
@@ -392,7 +393,7 @@ class FlowAPI:
                             ("action", self.get_flow_card_actions)):
             cards = await fetch()
             for card in cards.values() if isinstance(cards, dict) else cards:
-                catalog[card["id"]] = {**card, "_kind": kind}
+                catalog.setdefault(card["id"], {})[kind] = card
         self._catalog, self._catalog_at = catalog, time.monotonic()
         return catalog
 

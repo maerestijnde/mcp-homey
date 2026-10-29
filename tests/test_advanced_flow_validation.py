@@ -12,9 +12,13 @@ T, A, C, D = (
 )
 
 CATALOG = {
-    "homey:manager:logic:webhook": {"_kind": "trigger", "args": [{"name": "event", "type": "text"}]},
-    "homey:manager:notifications:create_notification": {"_kind": "action", "args": [{"name": "text", "type": "text"}]},
-    "homey:manager:logic:lt": {"_kind": "condition", "args": [{"name": "value", "type": "number", "required": False}]},
+    "homey:manager:logic:webhook": {"trigger": {"args": [{"name": "event", "type": "text"}]}},
+    "homey:manager:notifications:create_notification": {"action": {"args": [{"name": "text", "type": "text"}]}},
+    "homey:manager:logic:lt": {"condition": {"args": [{"name": "value", "type": "number", "required": False}]}},
+    "homey:app:com.athom.homeyscript:runCode_v2": {
+        "condition": {"args": [{"name": "code", "type": "code"}]},
+        "action": {"args": [{"name": "code", "type": "code"}]},
+    },
 }
 
 VALID = {
@@ -63,6 +67,13 @@ def test_broken_flows_are_rejected(mutate, expected):
         assert errors == []  # start card replaces trigger: still valid
     else:
         assert any(expected in e for e in errors), errors
+
+
+@pytest.mark.parametrize("kind", ["condition", "action"])
+def test_id_shared_by_condition_and_action(kind):
+    flow = copy.deepcopy(VALID)
+    flow["cards"][C].update(type=kind, id="homey:app:com.athom.homeyscript:runCode_v2", args={"code": "return true"})
+    assert validate_advanced_flow(flow, CATALOG) == []
 
 
 def test_optional_arg_may_be_omitted():
