@@ -12,11 +12,7 @@ log_file = Path(__file__).parent.parent.parent / "homey_mcp_server.log"
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file),
-        # Add stderr handler for errors so Claude can see startup issues
-        logging.StreamHandler(sys.stderr)
-    ]
+    handlers=[logging.FileHandler(log_file)],
 )
 
 # Set stderr handler to only show warnings and errors
