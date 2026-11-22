@@ -93,8 +93,9 @@ docs/_build/
 .dmypy.json
 dmypy.json
 
-#claude
-.claude/
+# Claude: keep local settings and agents private, share the skills
+.claude/*
+!.claude/skills/
 .claude.md
 claude.md
 

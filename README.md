@@ -203,6 +203,27 @@ Check it with `claude mcp list`. `--scope user` makes it available in all your p
 
 ---
 
+## Building advanced flows: the Claude skill
+
+This repo comes with a Claude skill, `homey-advanced-flows`, in [`.claude/skills/`](.claude/skills/homey-advanced-flows/SKILL.md). It gives Claude:
+
+- the exact card format: card ids, arguments, tokens and delays
+- a safe way of working: validate first, create flows disabled, then check that the flow isn't broken
+- fixes for the usual errors
+
+How to use it:
+
+- **Claude Code**: nothing to do. Claude loads it automatically when you work in this folder.
+- **Claude Desktop**: zip the `homey-advanced-flows` folder, then upload the zip under **Settings → Capabilities → Skills**. Skills need a paid Claude plan. On macOS:
+
+  ```bash
+  cd .claude/skills && zip -r ~/Desktop/homey-advanced-flows.zip homey-advanced-flows
+  ```
+
+  On Windows, right-click the folder → **Send to → Compressed (zipped) folder**.
+
+---
+
 ## Trying it without a Homey
 
 Set this in `.env` to get a fake house with demo devices, flows and energy data:
