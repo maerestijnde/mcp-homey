@@ -37,6 +37,20 @@ async def test_homey_client_connect(homey_client):
         mock_session.get.assert_called_with("/api/manager/system")
 
 
+@pytest.mark.asyncio
+async def test_connect_failure_stays_live(homey_client):
+    """Startup timeout must not pin the process to demo data."""
+    import httpx
+
+    homey_client.session = AsyncMock()
+    homey_client.session.get.side_effect = httpx.ConnectTimeout("boot blip")
+
+    await homey_client.connect()
+
+    assert homey_client.config.demo_mode is False
+    assert homey_client.config.offline_mode is False
+
+
 def test_config_creation():
     """Test dat configuratie correct wordt aangemaakt."""
     config = HomeyMCPConfig(homey_local_address="192.168.1.100", homey_local_token="test-token")

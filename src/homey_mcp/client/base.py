@@ -68,35 +68,13 @@ class HomeyAPIClient:
             response = await self.session.get("/api/manager/system")
             response.raise_for_status()
             logger.info("✅ Successfully connected to Homey")
-        except httpx.ConnectTimeout:
-            logger.warning(f"❌ Connection timeout to {self.base_url}")
-            logger.warning("💡 Check if:")
-            logger.warning("   - Homey IP address is correct")
-            logger.warning("   - Homey is reachable on the network")
-            logger.warning("   - Firewall settings")
-            logger.warning("🔄 Switching to demo mode automatically...")
-            # Auto-enable demo mode for connection failures
-            self.config.offline_mode = True
-            self.config.demo_mode = True
-            return  # Continue in demo mode
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                logger.warning("❌ Unauthorized - check your Personal Access Token")
-                logger.warning("🔄 Switching to demo mode automatically...")
-                # Auto-enable demo mode for authentication failures
-                self.config.offline_mode = True
-                self.config.demo_mode = True
-                return  # Continue in demo mode
-            else:
-                logger.error(f"❌ HTTP error {e.response.status_code}: {e.response.text}")
-            raise
         except Exception as e:
-            logger.warning(f"❌ Cannot connect to Homey: {e}")
-            logger.warning("🔄 Switching to demo mode automatically...")
-            # Auto-enable demo mode for any connection failures
-            self.config.offline_mode = True
-            self.config.demo_mode = True
-            return  # Continue in demo mode
+            # Stay live: a startup blip (network not up yet) must not silently pin the whole
+            # process to demo data. Each tool call retries the real Homey and reports its own error.
+            if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 401:
+                logger.error("❌ Unauthorized - check your Personal Access Token")
+            else:
+                logger.error(f"❌ Cannot reach Homey at {self.base_url} ({type(e).__name__}: {e}); will retry on each call")
 
     async def disconnect(self):
         """Close connection."""
