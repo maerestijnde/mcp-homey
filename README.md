@@ -244,4 +244,15 @@ uv run python scripts/mcp_call.py <tool> '<json>'  # call one tool without resta
 
 Example: `uv run python scripts/mcp_call.py get_flows '{"flow_type": "advanced"}'`
 
+### Saving your flow cards locally
+
+Handy when you build flows with Claude Code inside this repo. Claude can then read the real structure of your cards and flows from files, instead of fetching them again every time.
+
+```bash
+uv run python scripts/flowlab.py cards   # all flow cards     -> ref/flowcards/
+uv run python scripts/flowlab.py flows   # all advanced flows -> ref/advancedflows/
+```
+
+`ref/` is in `.gitignore`, because these files contain your device IDs and flow names. Keep it that way. The dump doesn't update itself: run it again after you add devices or apps.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md). License: [MIT](LICENSE).
